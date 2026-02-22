@@ -1,10 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { type CSSProperties, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { CodeEditor } from "@/components/shared/code-editor";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -20,8 +18,8 @@ import {
 	FormItem,
 	FormMessage,
 } from "@/components/ui/form";
-import { Toggle } from "@/components/ui/toggle";
 import { api } from "@/utils/api";
+import { RailwayEnvEditor } from "@/components/hadron/railway-env-editor";
 import type { ServiceType } from "../advanced/show-resources";
 
 const addEnvironmentSchema = z.object({
@@ -50,7 +48,6 @@ export const ShowEnvironment = ({ id, type }: Props) => {
 	const { data, refetch } = queryMap[type]
 		? queryMap[type]()
 		: api.mongo.one.useQuery({ mongoId: id }, { enabled: !!id });
-	const [isEnvVisible, setIsEnvVisible] = useState(true);
 
 	const mutationMap = {
 		postgres: () => api.postgres.update.useMutation(),
@@ -126,30 +123,16 @@ export const ShowEnvironment = ({ id, type }: Props) => {
 	return (
 		<div className="flex w-full flex-col gap-5 ">
 			<Card className="bg-background">
-				<CardHeader className="flex flex-row w-full items-center justify-between">
-					<div>
-						<CardTitle className="text-xl">Environment Settings</CardTitle>
-						<CardDescription>
-							You can add environment variables to your resource.
-							{hasChanges && (
-								<span className="text-yellow-500 ml-2">
-									(You have unsaved changes)
-								</span>
-							)}
-						</CardDescription>
-					</div>
-
-					<Toggle
-						aria-label="Toggle bold"
-						pressed={isEnvVisible}
-						onPressedChange={setIsEnvVisible}
-					>
-						{isEnvVisible ? (
-							<EyeOffIcon className="h-4 w-4 text-muted-foreground" />
-						) : (
-							<EyeIcon className="h-4 w-4 text-muted-foreground" />
+				<CardHeader>
+					<CardTitle className="text-xl">Environment Settings</CardTitle>
+					<CardDescription>
+						You can add environment variables to your resource.
+						{hasChanges && (
+							<span className="text-yellow-500 ml-2">
+								(You have unsaved changes)
+							</span>
 						)}
-					</Toggle>
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
@@ -163,21 +146,11 @@ export const ShowEnvironment = ({ id, type }: Props) => {
 								name="environment"
 								render={({ field }) => (
 									<FormItem>
-										<FormControl className="">
-											<CodeEditor
-												style={
-													{
-														WebkitTextSecurity: isEnvVisible ? "disc" : null,
-													} as CSSProperties
-												}
-												language="properties"
-												disabled={isEnvVisible}
-												className="font-mono"
-												wrapperClassName="compose-file-editor"
-												placeholder={`NODE_ENV=production
-PORT=3000
-														`}
-												{...field}
+										<FormControl>
+											<RailwayEnvEditor
+												value={field.value}
+												onChange={field.onChange}
+												placeholder={`NODE_ENV=production\nPORT=3000`}
 											/>
 										</FormControl>
 										<FormMessage />

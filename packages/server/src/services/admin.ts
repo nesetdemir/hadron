@@ -7,7 +7,6 @@ import {
 } from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
-import { IS_CLOUD } from "../constants";
 import { getWebServerSettings } from "./web-server-settings";
 
 export const findUserById = async (userId: string) => {
@@ -105,9 +104,6 @@ export const removeUserById = async (userId: string) => {
 };
 
 export const getDokployUrl = async () => {
-	if (IS_CLOUD) {
-		return "https://app.dokploy.com";
-	}
 	const settings = await getWebServerSettings();
 
 	if (settings?.host) {

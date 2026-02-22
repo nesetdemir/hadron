@@ -30,7 +30,7 @@ export type TemplateProps = {
 };
 
 export const VolumeBackupEmail = ({
-	projectName = "dokploy",
+	projectName = "hadron",
 	applicationName = "frontend",
 	volumeName = "app-data",
 	serviceType = "application",
@@ -61,11 +61,11 @@ export const VolumeBackupEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Dokploy/dokploy/refs/heads/canary/apps/dokploy/logo.png"
+									"https://raw.githubusercontent.com/nesetdemir/dokploy/refs/heads/hadron/apps/dokploy/logo.png"
 								}
 								width="100"
 								height="50"
-								alt="Dokploy"
+								alt="Hadron"
 								className="my-0 mx-auto"
 							/>
 						</Section>

@@ -535,7 +535,7 @@ export const userRouter = createTRPCRouter({
 
 			try {
 				const htmlContent = `
-\t\t\t\t<p>You are invited to join ${organization?.name || "organization"} on Dokploy. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
+\t\t\t\t<p>You are invited to join ${organization?.name || "organization"} on Hadron. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 \t\t\t\t`;
 
 				if (email) {

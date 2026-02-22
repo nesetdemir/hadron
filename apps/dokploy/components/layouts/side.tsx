@@ -417,18 +417,7 @@ const MENU: Menu = {
 		},
 	],
 
-	help: [
-		{
-			name: "Documentation",
-			url: "https://docs.dokploy.com/docs/core",
-			icon: BookIcon,
-		},
-		{
-			name: "Support",
-			url: "https://discord.gg/2tBnJ3jDJc",
-			icon: CircleHelp,
-		},
-	],
+	help: [],
 } as const;
 
 /**

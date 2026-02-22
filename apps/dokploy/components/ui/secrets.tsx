@@ -15,12 +15,20 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Toggle } from "@/components/ui/toggle";
+import {
+	RailwayEnvEditor,
+	type RailwayEnvEditorProps,
+} from "@/components/hadron/railway-env-editor";
+import type { ServiceEnvInfo } from "@/components/hadron/env-autocomplete";
 
 interface Props {
 	name: string;
 	title: string;
 	description: ReactNode;
 	placeholder: string;
+	additionalExtensions?: import("@uiw/react-codemirror").ReactCodeMirrorProps["extensions"];
+	enableVisualEditor?: boolean;
+	services?: ServiceEnvInfo[];
 }
 
 export const Secrets = (props: Props) => {
@@ -35,17 +43,19 @@ export const Secrets = (props: Props) => {
 					<CardDescription>{props.description}</CardDescription>
 				</div>
 
-				<Toggle
-					aria-label="Toggle bold"
-					pressed={isVisible}
-					onPressedChange={setIsVisible}
-				>
-					{isVisible ? (
-						<EyeOffIcon className="h-4 w-4 text-muted-foreground" />
-					) : (
-						<EyeIcon className="h-4 w-4 text-muted-foreground" />
-					)}
-				</Toggle>
+				{!props.enableVisualEditor && (
+					<Toggle
+						aria-label="Toggle bold"
+						pressed={isVisible}
+						onPressedChange={setIsVisible}
+					>
+						{isVisible ? (
+							<EyeOffIcon className="h-4 w-4 text-muted-foreground" />
+						) : (
+							<EyeIcon className="h-4 w-4 text-muted-foreground" />
+						)}
+					</Toggle>
+				)}
 			</CardHeader>
 			<CardContent className="w-full space-y-4 p-0">
 				<FormField
@@ -54,19 +64,30 @@ export const Secrets = (props: Props) => {
 					render={({ field }) => (
 						<FormItem className="w-full">
 							<FormControl>
-								<CodeEditor
-									style={
-										{
-											WebkitTextSecurity: isVisible ? "disc" : null,
-										} as CSSProperties
-									}
-									language="properties"
-									disabled={isVisible}
-									lineWrapping
-									placeholder={props.placeholder}
-									className="h-96 font-mono"
-									{...field}
-								/>
+								{props.enableVisualEditor ? (
+									<RailwayEnvEditor
+										value={field.value}
+										onChange={field.onChange}
+										services={props.services}
+										additionalExtensions={props.additionalExtensions}
+										placeholder={props.placeholder}
+									/>
+								) : (
+									<CodeEditor
+										style={
+											{
+												WebkitTextSecurity: isVisible ? "disc" : null,
+											} as CSSProperties
+										}
+										language="properties"
+										disabled={isVisible}
+										lineWrapping
+										placeholder={props.placeholder}
+										className="h-96 font-mono"
+										additionalExtensions={props.additionalExtensions}
+										{...field}
+									/>
+								)}
 							</FormControl>
 
 							<FormMessage />

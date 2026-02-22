@@ -20,10 +20,9 @@ async function generateOpenAPI() {
 		console.log("🔄 Generating OpenAPI specification...");
 
 		const openApiDocument = generateOpenApiDocument(appRouter, {
-			title: "Dokploy API",
+			title: "Hadron API",
 			version: "1.0.0",
-			baseUrl: "https://your-dokploy-instance.com/api",
-			docsUrl: "https://docs.dokploy.com/api",
+			baseUrl: "/api",
 			tags: [
 				"admin",
 				"docker",
@@ -67,17 +66,16 @@ async function generateOpenAPI() {
 
 		// Enhance metadata
 		openApiDocument.info = {
-			title: "Dokploy API",
+			title: "Hadron API",
 			description:
-				"Complete API documentation for Dokploy - Deploy applications, manage databases, and orchestrate your infrastructure. This API allows you to programmatically manage all aspects of your Dokploy instance.",
+				"Complete API documentation for Hadron - Deploy applications, manage databases, and orchestrate your infrastructure.",
 			version: "1.0.0",
 			contact: {
-				name: "Dokploy Team",
-				url: "https://dokploy.com",
-			},
+				name: "Hadron",
+				},
 			license: {
 				name: "Apache 2.0",
-				url: "https://github.com/dokploy/dokploy/blob/canary/LICENSE",
+				url: "https://github.com/nesetdemir/dokploy/blob/hadron/LICENSE",
 			},
 		};
 
@@ -90,7 +88,7 @@ async function generateOpenAPI() {
 					in: "header",
 					name: "x-api-key",
 					description:
-						"API key authentication. Generate an API key from your Dokploy dashboard under Settings > API Keys.",
+						"API key authentication. Generate an API key from your Hadron dashboard under Settings > API Keys.",
 				},
 			},
 		};
@@ -101,12 +99,6 @@ async function generateOpenAPI() {
 				apiKey: [],
 			},
 		];
-
-		// Add external docs
-		openApiDocument.externalDocs = {
-			description: "Full documentation",
-			url: "https://docs.dokploy.com",
-		};
 
 		// Write to root of repo
 		const outputPath = resolve(__dirname, "../../../openapi.json");

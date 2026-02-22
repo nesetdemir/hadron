@@ -1,9 +1,10 @@
 import {
 	AlertTriangle,
-	ArrowUpDown,
-	BookIcon,
+	ChevronDown,
+	CircuitBoard,
 	ExternalLinkIcon,
 	FolderInput,
+	GlobeIcon,
 	Loader2,
 	MoreHorizontalIcon,
 	Search,
@@ -13,10 +14,14 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
-import { DateTooltip } from "@/components/shared/date-tooltip";
-import { FocusShortcutInput } from "@/components/shared/focus-shortcut-input";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
+import {
+	MariadbIcon,
+	MongodbIcon,
+	MysqlIcon,
+	PostgresqlIcon,
+	RedisIcon,
+} from "@/components/icons/data-tools-icons";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -30,14 +35,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -46,38 +43,121 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { TimeBadge } from "@/components/ui/time-badge";
+import { Input } from "@/components/ui/input";
 import { api } from "@/utils/api";
 import { useDebounce } from "@/utils/hooks/use-debounce";
 import { HandleProject } from "./handle-project";
 import { ProjectEnvironment } from "./project-environment";
 
+type ServiceIcon = {
+	type: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose";
+	status?: string;
+};
+
+const SERVICE_ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
+	application: ({ className }) => <GlobeIcon className={className} />,
+	postgres: PostgresqlIcon,
+	mysql: MysqlIcon,
+	mariadb: MariadbIcon,
+	mongo: MongodbIcon,
+	redis: RedisIcon,
+	compose: ({ className }) => <CircuitBoard className={className} />,
+};
+
+const SERVICE_ICON_COLORS: Record<string, { text: string; bg: string }> = {
+	application: { text: "text-blue-500", bg: "bg-blue-500/10" },
+	postgres: { text: "text-blue-600", bg: "bg-blue-600/10" },
+	mysql: { text: "text-orange-500", bg: "bg-orange-500/10" },
+	mariadb: { text: "text-amber-700", bg: "bg-amber-700/10" },
+	mongo: { text: "text-green-600", bg: "bg-green-600/10" },
+	redis: { text: "text-red-500", bg: "bg-red-500/10" },
+	compose: { text: "text-violet-500", bg: "bg-violet-500/10" },
+};
+
+const SORT_OPTIONS = [
+	{ value: "createdAt-desc", label: "Recent Activity" },
+	{ value: "createdAt-asc", label: "Oldest First" },
+	{ value: "name-asc", label: "Name (A-Z)" },
+	{ value: "name-desc", label: "Name (Z-A)" },
+	{ value: "services-desc", label: "Most Services" },
+	{ value: "services-asc", label: "Least Services" },
+];
+
+function collectProjectServices(
+	environments: Array<{
+		name: string;
+		isDefault: boolean;
+		applications: Array<{ applicationStatus: string }>;
+		mariadb: Array<{ applicationStatus: string }>;
+		mongo: Array<{ applicationStatus: string }>;
+		mysql: Array<{ applicationStatus: string }>;
+		postgres: Array<{ applicationStatus: string }>;
+		redis: Array<{ applicationStatus: string }>;
+		compose: Array<{ composeStatus: string }>;
+	}>,
+) {
+	const icons: ServiceIcon[] = [];
+	let running = 0;
+	let total = 0;
+
+	for (const env of environments) {
+		for (const app of env.applications) {
+			icons.push({ type: "application", status: app.applicationStatus });
+			total++;
+			if (app.applicationStatus === "running") running++;
+		}
+		for (const db of env.postgres) {
+			icons.push({ type: "postgres", status: db.applicationStatus });
+			total++;
+			if (db.applicationStatus === "running") running++;
+		}
+		for (const db of env.mysql) {
+			icons.push({ type: "mysql", status: db.applicationStatus });
+			total++;
+			if (db.applicationStatus === "running") running++;
+		}
+		for (const db of env.mariadb) {
+			icons.push({ type: "mariadb", status: db.applicationStatus });
+			total++;
+			if (db.applicationStatus === "running") running++;
+		}
+		for (const db of env.mongo) {
+			icons.push({ type: "mongo", status: db.applicationStatus });
+			total++;
+			if (db.applicationStatus === "running") running++;
+		}
+		for (const db of env.redis) {
+			icons.push({ type: "redis", status: db.applicationStatus });
+			total++;
+			if (db.applicationStatus === "running") running++;
+		}
+		for (const comp of env.compose) {
+			icons.push({ type: "compose", status: comp.composeStatus });
+			total++;
+			if (comp.composeStatus === "running") running++;
+		}
+	}
+
+	return { icons, running, total };
+}
+
 export const ShowProjects = () => {
 	const utils = api.useUtils();
 	const router = useRouter();
-	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { data, isLoading } = api.project.all.useQuery();
 	const { data: auth } = api.user.get.useQuery();
+	const { data, isLoading } = api.project.all.useQuery();
 	const { mutateAsync } = api.project.remove.useMutation();
 
-	const [searchQuery, setSearchQuery] = useState(
-		router.isReady && typeof router.query.q === "string" ? router.query.q : "",
-	);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [showSearch, setShowSearch] = useState(false);
 	const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-	const [sortBy, setSortBy] = useState<string>(() => {
-		if (typeof window !== "undefined") {
-			return localStorage.getItem("projectsSort") || "createdAt-desc";
-		}
-		return "createdAt-desc";
-	});
+	const [sortBy, setSortBy] = useState<string>("createdAt-desc");
+
+	useEffect(() => {
+		const saved = localStorage.getItem("projectsSort");
+		if (saved) setSortBy(saved);
+	}, []);
 
 	useEffect(() => {
 		localStorage.setItem("projectsSort", sortBy);
@@ -107,6 +187,8 @@ export const ShowProjects = () => {
 		});
 	}, [debouncedSearchQuery]);
 
+	const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Recent Activity";
+
 	const filteredProjects = useMemo(() => {
 		if (!data) return [];
 
@@ -120,7 +202,6 @@ export const ShowProjects = () => {
 					.includes(debouncedSearchQuery.toLowerCase()),
 		);
 
-		// Then sort the filtered results
 		const [field, direction] = sortBy.split("-");
 		return [...filtered].sort((a, b) => {
 			let comparison = 0;
@@ -168,426 +249,329 @@ export const ShowProjects = () => {
 	}, [data, debouncedSearchQuery, sortBy]);
 
 	return (
-		<>
-			<BreadcrumbSidebar
-				list={[{ name: "Projects", href: "/dashboard/projects" }]}
-			/>
-			{!isCloud && (
-				<div className="absolute top-4 right-4">
-					<TimeBadge />
+		<div className="pt-4 max-w-[1400px] mx-auto">
+			{/* Page header */}
+			<div className="flex items-center justify-between mb-1">
+				<h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+				<div className="flex items-center gap-2">
+					{showSearch ? (
+						<Input
+							autoFocus
+							placeholder="Search projects..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							onBlur={() => {
+								if (!searchQuery) setShowSearch(false);
+							}}
+							className="h-8 w-48 text-sm"
+						/>
+					) : (
+						<Button
+							variant="ghost"
+							size="icon"
+							className="size-8 text-muted-foreground"
+							onClick={() => setShowSearch(true)}
+						>
+							<Search className="size-4" />
+						</Button>
+					)}
+					{(auth?.role === "owner" ||
+						auth?.role === "admin" ||
+						auth?.canCreateProjects) && (
+						<HandleProject />
+					)}
 				</div>
-			)}
-			<div className="w-full">
-				<Card className="h-full bg-sidebar p-2.5 rounded-xl  ">
-					<div className="rounded-xl bg-background shadow-md ">
-						<div className="flex justify-between gap-4 w-full items-center flex-wrap p-6">
-							<CardHeader className="p-0">
-								<CardTitle className="text-xl flex flex-row gap-2">
-									<FolderInput className="size-6 text-muted-foreground self-center" />
-									Projects
-								</CardTitle>
-								<CardDescription>
-									Create and manage your projects
-								</CardDescription>
-							</CardHeader>
-							{(auth?.role === "owner" ||
-								auth?.role === "admin" ||
-								auth?.canCreateProjects) && (
-								<div className="">
-									<HandleProject />
-								</div>
-							)}
-						</div>
+			</div>
 
-						<CardContent className="space-y-2 py-8 border-t gap-4 flex flex-col min-h-[60vh]">
-							{isLoading ? (
-								<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[60vh]">
-									<span>Loading...</span>
-									<Loader2 className="animate-spin size-4" />
-								</div>
-							) : (
-								<>
-									<div className="flex max-sm:flex-col gap-4 items-center w-full">
-										<div className="flex-1 relative max-sm:w-full">
-											<FocusShortcutInput
-												placeholder="Filter projects..."
-												value={searchQuery}
-												onChange={(e) => setSearchQuery(e.target.value)}
-												className="pr-10"
-											/>
+			{/* Subtitle: count + sort */}
+			<div className="flex items-center gap-3 text-sm text-muted-foreground mb-8">
+				<span>{filteredProjects.length} Projects</span>
+				<DropdownMenu>
+					<DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground transition-colors outline-none">
+						Sort By: {sortLabel}
+						<ChevronDown className="size-3.5" />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="start">
+						{SORT_OPTIONS.map((option) => (
+							<DropdownMenuItem
+								key={option.value}
+								onClick={() => setSortBy(option.value)}
+								className={sortBy === option.value ? "text-foreground font-medium" : ""}
+							>
+								{option.label}
+							</DropdownMenuItem>
+						))}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
 
-											<Search className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-										</div>
-										<div className="flex items-center gap-2 min-w-48 max-sm:w-full">
-											<ArrowUpDown className="size-4 text-muted-foreground" />
-											<Select value={sortBy} onValueChange={setSortBy}>
-												<SelectTrigger className="w-full">
-													<SelectValue placeholder="Sort by..." />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value="name-asc">Name (A-Z)</SelectItem>
-													<SelectItem value="name-desc">Name (Z-A)</SelectItem>
-													<SelectItem value="createdAt-desc">
-														Newest first
-													</SelectItem>
-													<SelectItem value="createdAt-asc">
-														Oldest first
-													</SelectItem>
-													<SelectItem value="services-desc">
-														Most services
-													</SelectItem>
-													<SelectItem value="services-asc">
-														Least services
-													</SelectItem>
-												</SelectContent>
-											</Select>
-										</div>
+			{/* Content */}
+			{isLoading ? (
+				<div className="flex items-center justify-center gap-2 text-sm text-muted-foreground h-[50vh]">
+					<Loader2 className="animate-spin size-4" />
+					<span>Loading projects...</span>
+				</div>
+			) : filteredProjects.length === 0 ? (
+				<div className="flex flex-col items-center justify-center gap-3 h-[50vh] text-muted-foreground">
+					<FolderInput className="size-10 opacity-40" />
+					<span className="text-sm font-medium">No projects found</span>
+				</div>
+			) : (
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					{filteredProjects.map((project) => {
+						const emptyServices = project?.environments
+							.map(
+								(env) =>
+									env.applications.length === 0 &&
+									env.mariadb.length === 0 &&
+									env.mongo.length === 0 &&
+									env.mysql.length === 0 &&
+									env.postgres.length === 0 &&
+									env.redis.length === 0 &&
+									env.compose.length === 0,
+							)
+							.every(Boolean);
+
+						const totalServices = project?.environments
+							.map(
+								(env) =>
+									env.mariadb.length +
+									env.mongo.length +
+									env.mysql.length +
+									env.postgres.length +
+									env.redis.length +
+									env.applications.length +
+									env.compose.length,
+							)
+							.reduce((acc, curr) => acc + curr, 0);
+
+						const { icons: serviceIcons, running: runningServices } =
+							collectProjectServices(project.environments as any);
+
+						const haveServicesWithDomains = project?.environments
+							.map(
+								(env) =>
+									env.applications.length > 0 ||
+									env.compose.length > 0,
+							)
+							.some(Boolean);
+
+						const accessibleEnvironment =
+							project?.environments.find((env) => env.isDefault) ||
+							project?.environments?.[0];
+
+						const hasNoEnvironments = !accessibleEnvironment;
+
+						return (
+							<Link
+								key={project.projectId}
+								href={
+									hasNoEnvironments
+										? "#"
+										: `/dashboard/project/${project.projectId}/environment/${accessibleEnvironment?.environmentId}`
+								}
+								onClick={(e) => {
+									if (hasNoEnvironments) {
+										e.preventDefault();
+									}
+								}}
+							>
+								<div className="group relative rounded-xl border bg-card hover:bg-accent/40 transition-colors flex flex-col min-h-[200px]">
+									{/* Card header: name + actions */}
+									<div className="flex items-start justify-between p-4 pb-0">
+										<h3 className="text-sm font-medium leading-tight">
+											{project.name}
+										</h3>
+										<DropdownMenu>
+											<DropdownMenuTrigger asChild>
+												<Button
+													variant="ghost"
+													size="icon"
+													className="size-7 -mt-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
+													onClick={(e) => e.preventDefault()}
+												>
+													<MoreHorizontalIcon className="size-4" />
+												</Button>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent
+												className="w-[200px]"
+												onClick={(e) => e.stopPropagation()}
+											>
+												<DropdownMenuLabel className="font-normal text-xs">
+													Actions
+												</DropdownMenuLabel>
+												<DropdownMenuSeparator />
+												<div onClick={(e) => e.stopPropagation()}>
+													<ProjectEnvironment
+														projectId={project.projectId}
+													/>
+												</div>
+												<div onClick={(e) => e.stopPropagation()}>
+													<HandleProject
+														projectId={project.projectId}
+													/>
+												</div>
+												{haveServicesWithDomains && (
+													<>
+														<DropdownMenuSeparator />
+														<DropdownMenuGroup>
+															<DropdownMenuLabel className="text-xs">
+																Domains
+															</DropdownMenuLabel>
+															{project.environments.map((env) =>
+																[...env.applications, ...env.compose].map((svc: any) =>
+																	svc.domains?.map((domain: any) => (
+																		<DropdownMenuItem
+																			key={domain.domainId}
+																			asChild
+																		>
+																			<a
+																				className="text-xs cursor-pointer justify-between"
+																				target="_blank"
+																				rel="noopener noreferrer"
+																				href={`${domain.https ? "https" : "http"}://${domain.host}${domain.path}`}
+																			>
+																				<span className="truncate">{domain.host}</span>
+																				<ExternalLinkIcon className="size-3 shrink-0 ml-2" />
+																			</a>
+																		</DropdownMenuItem>
+																	)),
+																),
+															)}
+														</DropdownMenuGroup>
+													</>
+												)}
+												{(auth?.role === "owner" ||
+													auth?.canDeleteProjects) && (
+													<>
+														<DropdownMenuSeparator />
+														<div onClick={(e) => e.stopPropagation()}>
+															<AlertDialog>
+																<AlertDialogTrigger className="w-full">
+																	<DropdownMenuItem
+																		className="w-full cursor-pointer text-destructive"
+																		onSelect={(e) =>
+																			e.preventDefault()
+																		}
+																	>
+																		<TrashIcon className="size-3.5 mr-2" />
+																		Delete
+																	</DropdownMenuItem>
+																</AlertDialogTrigger>
+																<AlertDialogContent>
+																	<AlertDialogHeader>
+																		<AlertDialogTitle>
+																			Delete this project?
+																		</AlertDialogTitle>
+																		{!emptyServices ? (
+																			<div className="flex gap-3 items-center rounded-lg bg-yellow-50 p-3 dark:bg-yellow-950">
+																				<AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-400 shrink-0" />
+																				<span className="text-sm text-yellow-600 dark:text-yellow-400">
+																					You have active services. Delete them first.
+																				</span>
+																			</div>
+																		) : (
+																			<AlertDialogDescription>
+																				This action cannot be undone.
+																			</AlertDialogDescription>
+																		)}
+																	</AlertDialogHeader>
+																	<AlertDialogFooter>
+																		<AlertDialogCancel>
+																			Cancel
+																		</AlertDialogCancel>
+																		<AlertDialogAction
+																			disabled={!emptyServices}
+																			onClick={async () => {
+																				await mutateAsync({
+																					projectId:
+																						project.projectId,
+																				})
+																					.then(() => {
+																						toast.success(
+																							"Project deleted successfully",
+																						);
+																					})
+																					.catch(() => {
+																						toast.error(
+																							"Error deleting this project",
+																						);
+																					})
+																					.finally(() => {
+																						utils.project.all.invalidate();
+																					});
+																			}}
+																		>
+																			Delete
+																		</AlertDialogAction>
+																	</AlertDialogFooter>
+																</AlertDialogContent>
+															</AlertDialog>
+														</div>
+													</>
+												)}
+											</DropdownMenuContent>
+										</DropdownMenu>
 									</div>
-									{filteredProjects?.length === 0 && (
-										<div className="mt-6 flex h-[50vh] w-full flex-col items-center justify-center space-y-4">
-											<FolderInput className="size-8 self-center text-muted-foreground" />
-											<span className="text-center font-medium text-muted-foreground">
-												No projects found
+
+									{/* No environments warning */}
+									{hasNoEnvironments && (
+										<div className="mx-4 mt-2 flex gap-2 items-center rounded-lg bg-yellow-50 p-2 dark:bg-yellow-950">
+											<AlertTriangle className="size-3.5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+											<span className="text-xs text-yellow-600 dark:text-yellow-400">
+												No environments available
 											</span>
 										</div>
 									)}
-									<div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5 flex-wrap gap-5">
-										{filteredProjects?.map((project) => {
-											const emptyServices = project?.environments
-												.map(
-													(env) =>
-														env.applications.length === 0 &&
-														env.mariadb.length === 0 &&
-														env.mongo.length === 0 &&
-														env.mysql.length === 0 &&
-														env.postgres.length === 0 &&
-														env.redis.length === 0 &&
-														env.applications.length === 0 &&
-														env.compose.length === 0,
-												)
-												.every(Boolean);
 
-											const totalServices = project?.environments
-												.map(
-													(env) =>
-														env.mariadb.length +
-														env.mongo.length +
-														env.mysql.length +
-														env.postgres.length +
-														env.redis.length +
-														env.applications.length +
-														env.compose.length,
-												)
-												.reduce((acc, curr) => acc + curr, 0);
-
-											const haveServicesWithDomains = project?.environments
-												.map(
-													(env) =>
-														env.applications.length > 0 ||
-														env.compose.length > 0,
-												)
-												.some(Boolean);
-
-											// Find default environment from accessible environments, or fall back to first accessible environment
-											const accessibleEnvironment =
-												project?.environments.find((env) => env.isDefault) ||
-												project?.environments?.[0];
-
-											const hasNoEnvironments = !accessibleEnvironment;
-
-											return (
-												<div
-													key={project.projectId}
-													className="w-full lg:max-w-md"
-												>
-													<Link
-														href={
-															hasNoEnvironments
-																? "#"
-																: `/dashboard/project/${project.projectId}/environment/${accessibleEnvironment?.environmentId}`
-														}
-														onClick={(e) => {
-															if (hasNoEnvironments) {
-																e.preventDefault();
-															}
-														}}
-													>
-														<Card className="group relative w-full h-full bg-transparent transition-colors hover:bg-border">
-															{haveServicesWithDomains ? (
-																<DropdownMenu>
-																	<DropdownMenuTrigger asChild>
-																		<Button
-																			className="absolute -right-3 -top-3 size-9 translate-y-1 rounded-full p-0 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
-																			size="sm"
-																			variant="default"
-																		>
-																			<ExternalLinkIcon className="size-3.5" />
-																		</Button>
-																	</DropdownMenuTrigger>
-																	<DropdownMenuContent
-																		className="w-[200px] space-y-2 overflow-y-auto max-h-[400px]"
-																		onClick={(e) => e.stopPropagation()}
-																	>
-																		{project.environments.some(
-																			(env) => env.applications.length > 0,
-																		) && (
-																			<DropdownMenuGroup>
-																				<DropdownMenuLabel>
-																					Applications
-																				</DropdownMenuLabel>
-																				{project.environments.map((env) =>
-																					env.applications.map((app) => (
-																						<div key={app.applicationId}>
-																							<DropdownMenuSeparator />
-																							<DropdownMenuGroup>
-																								<DropdownMenuLabel className="font-normal capitalize text-xs flex items-center justify-between">
-																									{app.name}
-																									<StatusTooltip
-																										status={
-																											app.applicationStatus
-																										}
-																									/>
-																								</DropdownMenuLabel>
-																								<DropdownMenuSeparator />
-																								{app.domains.map((domain) => (
-																									<DropdownMenuItem
-																										key={domain.domainId}
-																										asChild
-																									>
-																										<Link
-																											className="space-x-4 text-xs cursor-pointer justify-between"
-																											target="_blank"
-																											href={`${
-																												domain.https
-																													? "https"
-																													: "http"
-																											}://${domain.host}${
-																												domain.path
-																											}`}
-																										>
-																											<span className="truncate">
-																												{domain.host}
-																											</span>
-																											<ExternalLinkIcon className="size-4 shrink-0" />
-																										</Link>
-																									</DropdownMenuItem>
-																								))}
-																							</DropdownMenuGroup>
-																						</div>
-																					)),
-																				)}
-																			</DropdownMenuGroup>
-																		)}
-																		{project.environments.some(
-																			(env) => env.compose.length > 0,
-																		) && (
-																			<DropdownMenuGroup>
-																				<DropdownMenuLabel>
-																					Compose
-																				</DropdownMenuLabel>
-																				{project.environments.map((env) =>
-																					env.compose.map((comp) => (
-																						<div key={comp.composeId}>
-																							<DropdownMenuSeparator />
-																							<DropdownMenuGroup>
-																								<DropdownMenuLabel className="font-normal capitalize text-xs flex items-center justify-between">
-																									{comp.name}
-																									<StatusTooltip
-																										status={comp.composeStatus}
-																									/>
-																								</DropdownMenuLabel>
-																								<DropdownMenuSeparator />
-																								{comp.domains.map((domain) => (
-																									<DropdownMenuItem
-																										key={domain.domainId}
-																										asChild
-																									>
-																										<Link
-																											className="space-x-4 text-xs cursor-pointer justify-between"
-																											target="_blank"
-																											href={`${
-																												domain.https
-																													? "https"
-																													: "http"
-																											}://${domain.host}${
-																												domain.path
-																											}`}
-																										>
-																											<span className="truncate">
-																												{domain.host}
-																											</span>
-																											<ExternalLinkIcon className="size-4 shrink-0" />
-																										</Link>
-																									</DropdownMenuItem>
-																								))}
-																							</DropdownMenuGroup>
-																						</div>
-																					)),
-																				)}
-																			</DropdownMenuGroup>
-																		)}
-																	</DropdownMenuContent>
-																</DropdownMenu>
-															) : null}
-															<CardHeader>
-																<CardTitle className="flex items-center justify-between gap-2 overflow-clip">
-																	<span className="flex flex-col gap-1.5 ">
-																		<div className="flex items-center gap-2">
-																			<BookIcon className="size-4 text-muted-foreground" />
-																			<span className="text-base font-medium leading-none">
-																				{project.name}
-																			</span>
-																		</div>
-
-																		<span className="text-sm font-medium text-muted-foreground break-normal">
-																			{project.description}
-																		</span>
-
-																		{hasNoEnvironments && (
-																			<div className="flex flex-row gap-2 items-center rounded-lg bg-yellow-50 p-2 mt-2 dark:bg-yellow-950">
-																				<AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-400 shrink-0" />
-																				<span className="text-xs text-yellow-600 dark:text-yellow-400">
-																					You have access to this project but no
-																					environments are available
-																				</span>
-																			</div>
-																		)}
-																	</span>
-																	<div className="flex self-start space-x-1">
-																		<DropdownMenu>
-																			<DropdownMenuTrigger asChild>
-																				<Button
-																					variant="ghost"
-																					size="icon"
-																					className="px-2"
-																				>
-																					<MoreHorizontalIcon className="size-5" />
-																				</Button>
-																			</DropdownMenuTrigger>
-																			<DropdownMenuContent
-																				className="w-[200px] space-y-2 overflow-y-auto max-h-[280px]"
-																				onClick={(e) => e.stopPropagation()}
-																			>
-																				<DropdownMenuLabel className="font-normal">
-																					Actions
-																				</DropdownMenuLabel>
-																				<div
-																					onClick={(e) => e.stopPropagation()}
-																				>
-																					<ProjectEnvironment
-																						projectId={project.projectId}
-																					/>
-																				</div>
-																				<div
-																					onClick={(e) => e.stopPropagation()}
-																				>
-																					<HandleProject
-																						projectId={project.projectId}
-																					/>
-																				</div>
-
-																				<div
-																					onClick={(e) => e.stopPropagation()}
-																				>
-																					{(auth?.role === "owner" ||
-																						auth?.canDeleteProjects) && (
-																						<AlertDialog>
-																							<AlertDialogTrigger className="w-full">
-																								<DropdownMenuItem
-																									className="w-full cursor-pointer  space-x-3"
-																									onSelect={(e) =>
-																										e.preventDefault()
-																									}
-																								>
-																									<TrashIcon className="size-4" />
-																									<span>Delete</span>
-																								</DropdownMenuItem>
-																							</AlertDialogTrigger>
-																							<AlertDialogContent>
-																								<AlertDialogHeader>
-																									<AlertDialogTitle>
-																										Are you sure to delete this
-																										project?
-																									</AlertDialogTitle>
-																									{!emptyServices ? (
-																										<div className="flex flex-row gap-4 rounded-lg bg-yellow-50 p-2 dark:bg-yellow-950">
-																											<AlertTriangle className="text-yellow-600 dark:text-yellow-400" />
-																											<span className="text-sm text-yellow-600 dark:text-yellow-400">
-																												You have active
-																												services, please delete
-																												them first
-																											</span>
-																										</div>
-																									) : (
-																										<AlertDialogDescription>
-																											This action cannot be
-																											undone
-																										</AlertDialogDescription>
-																									)}
-																								</AlertDialogHeader>
-																								<AlertDialogFooter>
-																									<AlertDialogCancel>
-																										Cancel
-																									</AlertDialogCancel>
-																									<AlertDialogAction
-																										disabled={!emptyServices}
-																										onClick={async () => {
-																											await mutateAsync({
-																												projectId:
-																													project.projectId,
-																											})
-																												.then(() => {
-																													toast.success(
-																														"Project deleted successfully",
-																													);
-																												})
-																												.catch(() => {
-																													toast.error(
-																														"Error deleting this project",
-																													);
-																												})
-																												.finally(() => {
-																													utils.project.all.invalidate();
-																												});
-																										}}
-																									>
-																										Delete
-																									</AlertDialogAction>
-																								</AlertDialogFooter>
-																							</AlertDialogContent>
-																						</AlertDialog>
-																					)}
-																				</div>
-																			</DropdownMenuContent>
-																		</DropdownMenu>
-																	</div>
-																</CardTitle>
-															</CardHeader>
-															<CardFooter className="pt-4">
-																<div className="space-y-1 text-sm flex flex-row justify-between max-sm:flex-wrap w-full gap-2 sm:gap-4">
-																	<DateTooltip date={project.createdAt}>
-																		Created
-																	</DateTooltip>
-																	<span>
-																		{totalServices}{" "}
-																		{totalServices === 1
-																			? "service"
-																			: "services"}
-																	</span>
-																</div>
-															</CardFooter>
-														</Card>
-													</Link>
-												</div>
-											);
-										})}
+									{/* Service icons - centered in card body */}
+									<div className="flex-1 flex items-center justify-center px-4 py-6">
+										{serviceIcons.length > 0 ? (
+											<div className="flex flex-wrap gap-2.5 justify-center">
+												{serviceIcons.slice(0, 12).map((svc, i) => {
+													const IconComp = SERVICE_ICON_MAP[svc.type];
+													const colors = SERVICE_ICON_COLORS[svc.type];
+													return (
+														<div
+															key={`${svc.type}-${i}`}
+															className={`flex items-center justify-center w-9 h-9 rounded-lg ${colors?.bg ?? "bg-muted/60"}`}
+														>
+															{IconComp && (
+																<IconComp className={`size-5 ${colors?.text ?? "text-muted-foreground"}`} />
+															)}
+														</div>
+													);
+												})}
+												{serviceIcons.length > 12 && (
+													<div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted/60">
+														<span className="text-xs text-muted-foreground font-medium">
+															+{serviceIcons.length - 12}
+														</span>
+													</div>
+												)}
+											</div>
+										) : (
+											<span className="text-xs text-muted-foreground/50">
+												No services
+											</span>
+										)}
 									</div>
-								</>
-							)}
-						</CardContent>
-					</div>
-				</Card>
-			</div>
-		</>
+
+									{/* Footer: status */}
+									<div className="px-4 pb-3.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+										<span className={`inline-block size-1.5 rounded-full ${runningServices > 0 ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+										<span>
+											{accessibleEnvironment?.name
+												? accessibleEnvironment.name.charAt(0).toUpperCase() + accessibleEnvironment.name.slice(1)
+												: "Production"} · {runningServices}/{totalServices} services online
+										</span>
+									</div>
+								</div>
+							</Link>
+						);
+					})}
+				</div>
+			)}
+		</div>
 	);
 };

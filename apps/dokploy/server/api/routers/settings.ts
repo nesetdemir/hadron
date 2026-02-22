@@ -13,6 +13,7 @@ import {
 	DEFAULT_UPDATE_DATA,
 	execAsync,
 	findServerById,
+	getDokployImage,
 	getDokployImageTag,
 	getLogCleanupStatus,
 	getUpdateData,
@@ -418,13 +419,14 @@ export const settingsRouter = createTRPCRouter({
 
 		const data = await getUpdateData(packageInfo.version);
 		if (data.updateAvailable) {
+			const serviceName = process.env.DOCKER_SERVICE_NAME || "dokploy";
 			void spawnAsync("docker", [
 				"service",
 				"update",
 				"--force",
 				"--image",
-				`dokploy/dokploy:${data.latestVersion}`,
-				"dokploy",
+				`${getDokployImage()}:${data.latestVersion}`,
+				serviceName,
 			]);
 		}
 
@@ -570,8 +572,8 @@ export const settingsRouter = createTRPCRouter({
 			});
 
 			openApiDocument.info = {
-				title: "Dokploy API",
-				description: "Endpoints for dokploy",
+				title: "Hadron API",
+				description: "Endpoints for Hadron",
 				version: "1.0.0",
 			};
 

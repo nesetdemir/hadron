@@ -23,8 +23,8 @@ import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 export const DockerLogs = dynamic(
 	() =>
-		import("@/components/dashboard/docker/logs/docker-logs-id").then(
-			(e) => e.DockerLogsId,
+		import("@/components/hadron/logs/hadron-log-viewer").then(
+			(e) => e.HadronLogViewer,
 		),
 	{
 		ssr: false,

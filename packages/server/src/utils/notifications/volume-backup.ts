@@ -165,7 +165,7 @@ export const sendVolumeBackupNotifications = async ({
 				],
 				timestamp: date.toISOString(),
 				footer: {
-					text: "Dokploy Volume Backup Notification",
+					text: "Hadron Volume Backup Notification",
 				},
 			});
 		}

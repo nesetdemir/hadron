@@ -190,7 +190,7 @@ export const SetupServer = ({ serverId, asButton = false }: Props) => {
 											Automatic process
 										</span>
 										<Link
-											href="https://docs.dokploy.com/docs/core/multi-server/instructions#requirements"
+											href="#"
 											target="_blank"
 											className="text-primary flex flex-row gap-2"
 										>

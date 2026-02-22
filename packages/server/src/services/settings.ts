@@ -24,6 +24,11 @@ export const DEFAULT_UPDATE_DATA: IUpdateData = {
 	updateAvailable: false,
 };
 
+/** Returns the Docker image name for Dokploy. Defaults to `dokploy/dokploy`. */
+export const getDokployImage = () => {
+	return process.env.DOCKER_IMAGE || "dokploy/dokploy";
+};
+
 /** Returns current Dokploy docker image tag or `latest` by default. */
 export const getDokployImageTag = () => {
 	return process.env.RELEASE_TAG || "latest";
@@ -31,8 +36,9 @@ export const getDokployImageTag = () => {
 
 /** Returns Dokploy docker service image digest */
 export const getServiceImageDigest = async () => {
+	const serviceName = process.env.DOCKER_SERVICE_NAME || "dokploy";
 	const { stdout } = await execAsync(
-		"docker service inspect dokploy --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
+		`docker service inspect ${serviceName} --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'`,
 	);
 
 	const currentDigest = stdout.trim().split("@")[1];
@@ -49,8 +55,9 @@ export const getUpdateData = async (
 	currentVersion: string,
 ): Promise<IUpdateData> => {
 	try {
+		const image = getDokployImage();
 		const baseUrl =
-			"https://hub.docker.com/v2/repositories/dokploy/dokploy/tags";
+			`https://hub.docker.com/v2/repositories/${image}/tags`;
 		let url: string | null = `${baseUrl}?page_size=100`;
 		let allResults: { digest: string; name: string }[] = [];
 
@@ -288,14 +295,15 @@ export const reloadDockerResource = async (
 	const resourceType = await getDockerResourceType(resourceName, serverId);
 	let command = "";
 	if (resourceType === "service") {
-		if (resourceName === "dokploy") {
+		const dokployServiceName = process.env.DOCKER_SERVICE_NAME || "dokploy";
+		if (resourceName === dokployServiceName) {
 			const currentImageTag = getDokployImageTag();
 			let imageTag = version;
 			if (currentImageTag === "canary" || currentImageTag === "feature") {
 				imageTag = currentImageTag;
 			}
 
-			command = `docker service update --force --image dokploy/dokploy:${imageTag} ${resourceName}`;
+			command = `docker service update --force --image ${getDokployImage()}:${imageTag} ${resourceName}`;
 		} else {
 			command = `docker service update --force ${resourceName}`;
 		}

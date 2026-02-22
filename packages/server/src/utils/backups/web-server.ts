@@ -42,9 +42,9 @@ export const runWebServerBackup = async (backup: BackupSchedule) => {
 			);
 
 			if (!containerId) {
-				writeStream.write("Dokploy postgres container not found❌\n");
+				writeStream.write("Hadron postgres container not found❌\n");
 				writeStream.end();
-				throw new Error("Dokploy postgres container not found");
+				throw new Error("Hadron postgres container not found");
 			}
 
 			writeStream.write(`Dokploy postgres container ID: ${containerId}\n`);

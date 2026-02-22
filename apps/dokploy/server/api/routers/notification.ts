@@ -129,7 +129,7 @@ export const notificationRouter = createTRPCRouter({
 			try {
 				await sendSlackNotification(input, {
 					channel: input.channel,
-					text: "Hi, From Dokploy 👋",
+					text: "Hi, From Hadron 👋",
 				});
 				return true;
 			} catch (error) {
@@ -184,7 +184,7 @@ export const notificationRouter = createTRPCRouter({
 		.input(apiTestTelegramConnection)
 		.mutation(async ({ input }) => {
 			try {
-				await sendTelegramNotification(input, "Hi, From Dokploy 👋");
+				await sendTelegramNotification(input, "Hi, From Hadron 👋");
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -244,7 +244,7 @@ export const notificationRouter = createTRPCRouter({
 
 				await sendDiscordNotification(input, {
 					title: decorate(">", "`🤚` - Test Notification"),
-					description: decorate(">", "Hi, From Dokploy 👋"),
+					description: decorate(">", "Hi, From Hadron 👋"),
 					color: 0xf3f7f4,
 				});
 
@@ -303,7 +303,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendEmailNotification(
 					input,
 					"Test Email",
-					"<p>Hi, From Dokploy 👋</p>",
+					"<p>Hi, From Hadron 👋</p>",
 				);
 				return true;
 			} catch (error) {
@@ -360,7 +360,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendResendNotification(
 					input,
 					"Test Email",
-					"<p>Hi, From Dokploy 👋</p>",
+					"<p>Hi, From Hadron 👋</p>",
 				);
 				return true;
 			} catch (error) {
@@ -456,7 +456,7 @@ export const notificationRouter = createTRPCRouter({
 					// For Dokploy server type, we don't have a specific organizationId
 					// This might need to be adjusted based on your business logic
 					organizationId = "";
-					ServerName = "Dokploy";
+					ServerName = "Hadron";
 				} else {
 					const result = await db
 						.select()
@@ -533,7 +533,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendGotifyNotification(
 					input,
 					"Test Notification",
-					"Hi, From Dokploy 👋",
+					"Hi, From Hadron 👋",
 				);
 				return true;
 			} catch (error) {
@@ -590,8 +590,8 @@ export const notificationRouter = createTRPCRouter({
 					input,
 					"Test Notification",
 					"",
-					"view, visit Dokploy on Github, https://github.com/dokploy/dokploy, clear=true;",
-					"Hi, From Dokploy 👋",
+					"",
+					"Hi, From Hadron 👋",
 				);
 				return true;
 			} catch (error) {
@@ -643,7 +643,7 @@ export const notificationRouter = createTRPCRouter({
 			try {
 				await sendCustomNotification(input, {
 					title: "Test Notification",
-					message: "Hi, From Dokploy 👋",
+					message: "Hi, From Hadron 👋",
 					timestamp: new Date().toISOString(),
 				});
 				return true;
@@ -700,7 +700,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendLarkNotification(input, {
 					msg_type: "text",
 					content: {
-						text: "Hi, From Dokploy 👋",
+						text: "Hi, From Hadron 👋",
 					},
 				});
 				return true;
@@ -756,7 +756,7 @@ export const notificationRouter = createTRPCRouter({
 			try {
 				await sendTeamsNotification(input, {
 					title: "🤚 Test Notification",
-					facts: [{ name: "Message", value: "Hi, From Dokploy 👋" }],
+					facts: [{ name: "Message", value: "Hi, From Hadron 👋" }],
 				});
 				return true;
 			} catch (error) {
@@ -812,7 +812,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendPushoverNotification(
 					input,
 					"Test Notification",
-					"Hi, From Dokploy 👋",
+					"Hi, From Hadron 👋",
 				);
 				return true;
 			} catch (error) {

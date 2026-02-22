@@ -18,7 +18,7 @@ export type TemplateProps = {
 export const DokployRestartEmail = ({
 	date = "2023-05-01T00:00:00.000Z",
 }: TemplateProps) => {
-	const previewText = "Your dokploy server was restarted";
+	const previewText = "Your Hadron server was restarted";
 	return (
 		<Html>
 			<Preview>{previewText}</Preview>
@@ -40,22 +40,22 @@ export const DokployRestartEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Dokploy/dokploy/refs/heads/canary/apps/dokploy/logo.png"
+									"https://raw.githubusercontent.com/nesetdemir/dokploy/refs/heads/hadron/apps/dokploy/logo.png"
 								}
 								width="100"
 								height="50"
-								alt="Dokploy"
+								alt="Hadron"
 								className="my-0 mx-auto"
 							/>
 						</Section>
 						<Heading className="text-black text-[24px] font-normal text-center p-0 my-[30px] mx-0">
-							Dokploy Server Restart
+							Hadron Server Restart
 						</Heading>
 						<Text className="text-black text-[14px] leading-[24px]">
 							Hello,
 						</Text>
 						<Text className="text-black text-[14px] leading-[24px]">
-							Your dokploy server was restarted ✅
+							Your Hadron server was restarted ✅
 						</Text>
 
 						<Section className="flex text-black text-[14px]  leading-[24px] bg-[#F4F4F5] rounded-lg p-2">

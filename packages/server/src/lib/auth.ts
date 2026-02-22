@@ -14,7 +14,6 @@ import {
 	getWebServerSettings,
 	updateWebServerSettings,
 } from "../services/web-server-settings";
-import { getHubSpotUTK, submitToHubSpot } from "../utils/tracking/hubspot";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
 
@@ -53,7 +52,7 @@ const { handler, api } = betterAuth({
 			allowDifferentEmails: true,
 		},
 	},
-	appName: "Dokploy",
+	appName: "Hadron",
 	socialProviders: {
 		github: {
 			clientId: process.env.GITHUB_CLIENT_ID as string,
@@ -165,31 +164,6 @@ const { handler, api } = betterAuth({
 						await updateWebServerSettings({
 							serverIp: await getPublicIpWithFallback(),
 						});
-					}
-
-					if (IS_CLOUD) {
-						try {
-							const hutk = getHubSpotUTK(
-								context?.request?.headers?.get("cookie") || undefined,
-							);
-							// Cast to include additional fields
-							const userWithFields = user as typeof user & {
-								lastName?: string;
-							};
-							const hubspotSuccess = await submitToHubSpot(
-								{
-									email: user.email,
-									firstName: user.name || "", // name is mapped to firstName column
-									lastName: userWithFields.lastName || "",
-								},
-								hutk,
-							);
-							if (!hubspotSuccess) {
-								console.error("Failed to submit to HubSpot");
-							}
-						} catch (error) {
-							console.error("Error submitting to HubSpot", error);
-						}
 					}
 
 					if (IS_CLOUD || !isAdminPresent) {
@@ -317,17 +291,15 @@ const { handler, api } = betterAuth({
 		organization({
 			async sendInvitationEmail(data, _request) {
 				if (IS_CLOUD) {
-					const host =
-						process.env.NODE_ENV === "development"
-							? "http://localhost:3000"
-							: "https://app.dokploy.com";
+					const { getDokployUrl } = await import("../services/admin");
+					const host = await getDokployUrl();
 					const inviteLink = `${host}/invitation?token=${data.id}`;
 
 					await sendEmail({
 						email: data.email,
 						subject: "Invitation to join organization",
 						text: `
-					<p>You are invited to join ${data.organization.name} on Dokploy. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
+					<p>You are invited to join ${data.organization.name} on Hadron. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 					`,
 					});
 				}

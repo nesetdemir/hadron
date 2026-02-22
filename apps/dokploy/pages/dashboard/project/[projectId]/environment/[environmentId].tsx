@@ -5,6 +5,7 @@ import {
 	Ban,
 	Check,
 	CheckCircle2,
+	ChevronLeft,
 	ChevronsUpDown,
 	CircuitBoard,
 	FolderInput,
@@ -27,6 +28,7 @@ import { useRouter } from "next/router";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import superjson from "superjson";
+import dynamic from "next/dynamic";
 import { AddAiAssistant } from "@/components/dashboard/project/add-ai-assistant";
 import { AddApplication } from "@/components/dashboard/project/add-application";
 import { AddCompose } from "@/components/dashboard/project/add-compose";
@@ -35,7 +37,6 @@ import { AddTemplate } from "@/components/dashboard/project/add-template";
 import { AdvancedEnvironmentSelector } from "@/components/dashboard/project/advanced-environment-selector";
 import { DuplicateProject } from "@/components/dashboard/project/duplicate-project";
 import { EnvironmentVariables } from "@/components/dashboard/project/environment-variables";
-import { ProjectEnvironment } from "@/components/dashboard/projects/project-environment";
 import {
 	MariadbIcon,
 	MongodbIcon,
@@ -43,9 +44,8 @@ import {
 	PostgresqlIcon,
 	RedisIcon,
 } from "@/components/icons/data-tools-icons";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { EnvironmentLayout } from "@/components/layouts/environment-layout";
 import { AlertBlock } from "@/components/shared/alert-block";
-import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
 import { DateTooltip } from "@/components/shared/date-tooltip";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { FocusShortcutInput } from "@/components/shared/focus-shortcut-input";
@@ -53,8 +53,6 @@ import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
-	CardContent,
-	CardDescription,
 	CardFooter,
 	CardHeader,
 	CardTitle,
@@ -99,6 +97,31 @@ import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
 
+// Hadron: Service Graph Canvas (lazy loaded to avoid SSR issues with React Flow)
+const ServiceGraphCanvas = dynamic(
+	() =>
+		import("@/components/hadron/service-graph").then(
+			(mod) => mod.ServiceGraphCanvas,
+		),
+	{ ssr: false },
+);
+const ServiceDetailPanel = dynamic(
+	() =>
+		import("@/components/hadron/service-graph/service-detail-panel").then(
+			(mod) => mod.ServiceDetailPanel,
+		),
+	{ ssr: false },
+);
+const MultiServiceLogViewer = dynamic(
+	() =>
+		import("@/components/hadron/logs/multi-service-log-viewer").then(
+			(mod) => mod.MultiServiceLogViewer,
+		),
+	{ ssr: false },
+);
+import { EnvironmentStats } from "@/components/hadron/dashboard/environment-stats";
+import { ProjectSettingsOverlay } from "@/components/hadron/settings/project-settings-overlay";
+
 export type Services = {
 	appName: string;
 	serverId?: string | null;
@@ -117,6 +140,7 @@ export type Services = {
 	createdAt: string;
 	status?: "idle" | "running" | "done" | "error";
 	lastDeployDate?: Date | null;
+	buildType?: string | null;
 };
 
 type Environment = Awaited<ReturnType<typeof findEnvironmentById>>;
@@ -156,6 +180,7 @@ export const extractServicesFromEnvironment = (
 				serverId: item.serverId,
 				serverName: item?.server?.name || null,
 				lastDeployDate,
+				buildType: item.buildType,
 			};
 		}) || [];
 
@@ -272,6 +297,57 @@ export const extractServicesFromEnvironment = (
 	return allServices;
 };
 
+/**
+ * Extract env vars from all services in an environment.
+ * Returns Record<serviceId, Record<KEY, VALUE>> for cross-service edge rendering.
+ */
+export const extractEnvVarsFromEnvironment = (
+	environment: Environment | undefined,
+): Record<string, Record<string, string>> => {
+	if (!environment) return {};
+
+	const result: Record<string, Record<string, string>> = {};
+
+	const parseEnv = (
+		envStr: string | null | undefined,
+	): Record<string, string> => {
+		if (!envStr) return {};
+		const vars: Record<string, string> = {};
+		for (const line of envStr.split("\n")) {
+			const trimmed = line.trim();
+			if (!trimmed || trimmed.startsWith("#")) continue;
+			const eqIdx = trimmed.indexOf("=");
+			if (eqIdx <= 0) continue;
+			vars[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1);
+		}
+		return vars;
+	};
+
+	for (const app of environment.applications || []) {
+		result[app.applicationId] = parseEnv(app.env);
+	}
+	for (const pg of environment.postgres || []) {
+		result[pg.postgresId] = parseEnv(pg.env);
+	}
+	for (const my of environment.mysql || []) {
+		result[my.mysqlId] = parseEnv(my.env);
+	}
+	for (const ma of environment.mariadb || []) {
+		result[ma.mariadbId] = parseEnv(ma.env);
+	}
+	for (const mo of environment.mongo || []) {
+		result[mo.mongoId] = parseEnv(mo.env);
+	}
+	for (const rd of environment.redis || []) {
+		result[rd.redisId] = parseEnv(rd.env);
+	}
+	for (const co of environment.compose || []) {
+		result[co.composeId] = parseEnv(co.env);
+	}
+
+	return result;
+};
+
 const EnvironmentPage = (
 	props: InferGetServerSidePropsType<typeof getServerSideProps>,
 ) => {
@@ -289,12 +365,12 @@ const EnvironmentPage = (
 			href: `/dashboard/project/${projectId}/environment/${env.environmentId}`,
 		})) || [];
 
-	const [sortBy, setSortBy] = useState<string>(() => {
-		if (typeof window !== "undefined") {
-			return localStorage.getItem("servicesSort") || "lastDeploy-desc";
-		}
-		return "lastDeploy-desc";
-	});
+	const [sortBy, setSortBy] = useState<string>("lastDeploy-desc");
+
+	useEffect(() => {
+		const stored = localStorage.getItem("servicesSort");
+		if (stored) setSortBy(stored);
+	}, []);
 
 	useEffect(() => {
 		localStorage.setItem("servicesSort", sortBy);
@@ -392,6 +468,12 @@ const EnvironmentPage = (
 
 	const applications = extractServicesFromEnvironment(currentEnvironment);
 
+	// Hadron: Extract env vars for canvas edge rendering
+	const envVars = useMemo(
+		() => extractEnvVarsFromEnvironment(currentEnvironment),
+		[currentEnvironment],
+	);
+
 	const [searchQuery, setSearchQuery] = useState("");
 	const serviceTypes = [
 		{ value: "application", label: "Application", icon: GlobeIcon },
@@ -410,6 +492,22 @@ const EnvironmentPage = (
 	const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 	const [deleteVolumes, setDeleteVolumes] = useState(false);
 	const [selectedServerId, setSelectedServerId] = useState<string>("all");
+
+	// Hadron: Canvas vs List vs Logs view mode
+	const [viewMode, setViewMode] = useState<"canvas" | "list" | "logs">("canvas");
+	// Hadron: Side panel for canvas node click
+	const [selectedCanvasService, setSelectedCanvasService] = useState<Services | null>(null);
+	// Hadron: Settings overlay
+	const [settingsOpen, setSettingsOpen] = useState(false);
+
+	useEffect(() => {
+		const stored = localStorage.getItem("hadron-view-mode") as "canvas" | "list" | "logs" | null;
+		if (stored) setViewMode(stored);
+	}, []);
+
+	useEffect(() => {
+		localStorage.setItem("hadron-view-mode", viewMode);
+	}, [viewMode]);
 
 	const handleSelectAll = () => {
 		if (selectedServices.length === filteredServices.length) {
@@ -864,94 +962,171 @@ const EnvironmentPage = (
 	}
 
 	return (
-		<div>
-			<BreadcrumbSidebar
-				list={[
-					{ name: "Projects", href: "/dashboard/projects" },
-					{
-						name: projectData?.name || "",
-					},
-					{
-						name: currentEnvironment.name,
-						dropdownItems: environmentDropdownItems,
-					},
-				]}
-			/>
+		<div className="flex flex-col h-full">
 			<Head>
 				<title>
-					Environment: {currentEnvironment.name} | {projectData?.name} | Dokploy
+					Environment: {currentEnvironment.name} | {projectData?.name} | Hadron
 				</title>
 			</Head>
-			<div className="w-full">
-				<Card className="h-full bg-sidebar p-2.5 rounded-xl">
-					<div className="rounded-xl bg-background shadow-md">
-						<div className="flex justify-between gap-4 w-full items-center flex-wrap p-6">
-							<CardHeader className="p-0">
-								<CardTitle className="text-xl flex flex-row gap-2 items-center">
-									<FolderInput className="size-6 text-muted-foreground self-center" />
-									{currentEnvironment.project.name}
-									<AdvancedEnvironmentSelector
-										projectId={projectId}
-										currentEnvironmentId={environmentId}
-									/>
-									<EnvironmentVariables environmentId={environmentId}>
-										<Button variant="ghost" size="icon">
-											<SquareTerminal className="size-5 text-muted-foreground cursor-pointer" />
-										</Button>
-									</EnvironmentVariables>
-								</CardTitle>
-								<CardDescription>
-									{currentEnvironment.description || "No description provided"}
-								</CardDescription>
-							</CardHeader>
-							<div className="flex flex-row gap-4 flex-wrap justify-between items-center">
-								<div className="flex flex-row gap-4 flex-wrap">
-									<ProjectEnvironment projectId={projectId}>
-										<Button variant="outline">Project Environment</Button>
-									</ProjectEnvironment>
-									{(auth?.role === "owner" ||
-										auth?.role === "admin" ||
-										auth?.canCreateServices) && (
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button>
-													<PlusIcon className="h-4 w-4" />
-													Create Service
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent
-												className="w-[200px] space-y-2"
-												align="end"
-											>
-												<DropdownMenuLabel className="text-sm font-normal">
-													Actions
-												</DropdownMenuLabel>
-												<DropdownMenuSeparator />
-												<AddApplication
-													projectName={projectData?.name}
-													environmentId={environmentId}
-												/>
-												<AddDatabase
-													projectName={projectData?.name}
-													environmentId={environmentId}
-												/>
-												<AddCompose
-													projectName={projectData?.name}
-													environmentId={environmentId}
-												/>
-												<AddTemplate environmentId={environmentId} />
-												<AddAiAssistant
-													projectName={projectData?.name}
-													environmentId={environmentId}
-												/>
-											</DropdownMenuContent>
-										</DropdownMenu>
-									)}
-								</div>
+
+			{/* Hadron: Railway-style top navigation bar */}
+			<div className="flex items-center justify-between border-b px-4 h-12 shrink-0 bg-background">
+				{/* Left: back arrow + project name + environment selector */}
+				<div className="flex items-center gap-1">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="size-8 text-muted-foreground hover:text-foreground"
+						onClick={() => router.push("/dashboard/projects")}
+					>
+						<ChevronLeft className="size-4" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						className="gap-1.5 text-sm font-medium px-2"
+						onClick={() => router.push("/dashboard/projects")}
+					>
+						{currentEnvironment.project.name}
+					</Button>
+					<AdvancedEnvironmentSelector
+						projectId={projectId}
+						currentEnvironmentId={environmentId}
+					/>
+				</div>
+
+				{/* Center: Navigation tabs (underline style) */}
+				<nav className="flex items-center h-full">
+					{[
+						{ key: "canvas" as const, label: "Architecture" },
+						{ key: "list" as const, label: "Services" },
+						{ key: "logs" as const, label: "Logs" },
+						{ key: "settings" as const, label: "Settings" },
+					].map((tab) => (
+						<button
+							key={tab.key}
+							type="button"
+							onClick={() => {
+								if (tab.key === "settings") {
+									setSettingsOpen(true);
+								} else {
+									setViewMode(tab.key);
+								}
+							}}
+							className={cn(
+								"px-3 h-full text-sm font-medium border-b-2 transition-colors",
+								tab.key !== "settings" && viewMode === tab.key
+									? "border-primary text-foreground"
+									: "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30",
+							)}
+						>
+							{tab.label}
+						</button>
+					))}
+				</nav>
+
+				{/* Right: Create button + env vars */}
+				<div className="flex items-center gap-2">
+					<EnvironmentVariables environmentId={environmentId}>
+						<Button variant="ghost" size="icon" className="size-8">
+							<SquareTerminal className="size-4 text-muted-foreground" />
+						</Button>
+					</EnvironmentVariables>
+					{(auth?.role === "owner" ||
+						auth?.role === "admin" ||
+						auth?.canCreateServices) && (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button size="sm" className="h-8 gap-1.5">
+									<PlusIcon className="size-3.5" />
+									Create
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								className="w-[200px] space-y-2"
+								align="end"
+							>
+								<DropdownMenuLabel className="text-sm font-normal">
+									Actions
+								</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								<AddApplication
+									projectName={projectData?.name}
+									environmentId={environmentId}
+								/>
+								<AddDatabase
+									projectName={projectData?.name}
+									environmentId={environmentId}
+								/>
+								<AddCompose
+									projectName={projectData?.name}
+									environmentId={environmentId}
+								/>
+								<AddTemplate environmentId={environmentId} />
+								<AddAiAssistant
+									projectName={projectData?.name}
+									environmentId={environmentId}
+								/>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					)}
+				</div>
+			</div>
+
+			{/* Content area - fills remaining space */}
+			<div className="flex-1 overflow-hidden">
+				{/* Hadron: Canvas View (Architecture) */}
+				{viewMode === "canvas" && (
+					<div className="h-full relative">
+						<ServiceGraphCanvas
+							services={filteredServices}
+							envVars={envVars}
+							environmentId={environmentId}
+							onNodeClick={(serviceId, _serviceType) => {
+								const svc = filteredServices.find((s) => s.id === serviceId);
+								setSelectedCanvasService(
+									svc && svc.id === selectedCanvasService?.id ? null : svc ?? null,
+								);
+							}}
+						/>
+						<ServiceDetailPanel
+							service={selectedCanvasService}
+							onClose={() => setSelectedCanvasService(null)}
+							projectId={projectId as string}
+							environmentId={environmentId as string}
+						/>
+					</div>
+				)}
+
+				{/* Hadron: Multi-Service Logs View */}
+				{viewMode === "logs" && (
+					<div className="h-full p-4">
+						{filteredServices.length > 0 ? (
+							<MultiServiceLogViewer
+								services={filteredServices.map((svc) => ({
+									id: svc.id,
+									name: svc.name,
+									appName: svc.appName,
+									serverId: svc.serverId,
+									runType: "native" as const,
+								}))}
+								className="h-full"
+							/>
+						) : (
+							<div className="flex h-full items-center justify-center text-muted-foreground">
+								No services available for log viewing
 							</div>
-						</div>
-						<CardContent className="space-y-2 py-8 border-t gap-4 flex flex-col min-h-[60vh]">
-							<>
+						)}
+					</div>
+				)}
+
+				{/* Original List View (Services tab) */}
+				{viewMode === "list" && (
+					<div className="overflow-y-auto h-full">
+					<div className="p-6 max-w-full overflow-x-hidden">
+						{/* Hadron: Environment stats */}
+						<EnvironmentStats services={filteredServices} />
+						<div className="mt-6 space-y-6">
 								<div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 									<div className="flex items-center gap-4">
 										<div className="flex items-center gap-2">
@@ -1321,8 +1496,8 @@ const EnvironmentPage = (
 										</DropdownMenu>
 									</div>
 
-									<div className="flex flex-col gap-2 lg:flex-row lg:gap-4 lg:items-center">
-										<div className="w-full relative">
+									<div className="flex flex-col gap-2 lg:flex-row lg:gap-4 lg:items-center min-w-0">
+										<div className="w-full lg:w-auto lg:min-w-[180px] lg:max-w-[280px] relative">
 											<FocusShortcutInput
 												placeholder="Filter services..."
 												value={searchQuery}
@@ -1428,7 +1603,7 @@ const EnvironmentPage = (
 														<SelectItem value="dokploy-server">
 															<div className="flex items-center gap-2">
 																<ServerIcon className="size-4" />
-																<span>Dokploy server</span>
+																<span>Hadron server</span>
 															</div>
 														</SelectItem>
 													)}
@@ -1449,27 +1624,25 @@ const EnvironmentPage = (
 									</div>
 								</div>
 
-								<div className="flex w-full gap-8">
-									{emptyServices ? (
-										<div className="flex h-[70vh] w-full flex-col items-center justify-center">
-											<FolderInput className="size-8 self-center text-muted-foreground" />
-											<span className="text-center font-medium text-muted-foreground">
-												No services added yet. Click on Create Service.
-											</span>
-										</div>
-									) : filteredServices.length === 0 ? (
-										<div className="flex h-[70vh] w-full flex-col items-center justify-center">
-											<Search className="size-8 self-center text-muted-foreground" />
-											<span className="text-center font-medium text-muted-foreground">
-												No services found with the current filters
-											</span>
-											<span className="text-sm text-muted-foreground">
-												Try adjusting your search or filters
-											</span>
-										</div>
-									) : (
-										<div className="flex w-full flex-col gap-4">
-											<div className="gap-5 pb-10 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+								{emptyServices ? (
+									<div className="flex h-[70vh] w-full flex-col items-center justify-center">
+										<FolderInput className="size-8 self-center text-muted-foreground" />
+										<span className="text-center font-medium text-muted-foreground">
+											No services added yet. Click on Create Service.
+										</span>
+									</div>
+								) : filteredServices.length === 0 ? (
+									<div className="flex h-[70vh] w-full flex-col items-center justify-center">
+										<Search className="size-8 self-center text-muted-foreground" />
+										<span className="text-center font-medium text-muted-foreground">
+											No services found with the current filters
+										</span>
+										<span className="text-sm text-muted-foreground">
+											Try adjusting your search or filters
+										</span>
+									</div>
+								) : (
+										<div className="gap-5 pb-10 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
 												{filteredServices?.map((service) => (
 													<Card
 														key={service.id}
@@ -1480,51 +1653,22 @@ const EnvironmentPage = (
 														}}
 														className="flex flex-col group relative cursor-pointer bg-transparent transition-colors hover:bg-border"
 													>
-														{service.serverId && (
-															<div className="absolute -left-1 -top-2">
-																<ServerIcon className="size-4 text-muted-foreground" />
-															</div>
-														)}
-														<div className="absolute -right-1 -top-2">
-															<StatusTooltip status={service.status} />
-														</div>
-
-														<div
-															className={cn(
-																"absolute -left-3 -bottom-3 size-9 translate-y-1 rounded-full p-0 transition-all duration-200 z-10 bg-background border",
-																selectedServices.includes(service.id)
-																	? "opacity-100 translate-y-0"
-																	: "opacity-0 group-hover:translate-y-0 group-hover:opacity-100",
-															)}
-															onClick={(e) =>
-																handleServiceSelect(service.id, e)
-															}
-														>
-															<div className="h-full w-full flex items-center justify-center">
-																<Checkbox
-																	checked={selectedServices.includes(
-																		service.id,
-																	)}
-																	className="data-[state=checked]:bg-primary"
-																/>
-															</div>
-														</div>
-
 														<CardHeader>
 															<CardTitle className="flex items-center justify-between">
 																<div className="flex flex-row items-center gap-2 justify-between w-full">
-																	<div className="flex flex-col gap-2">
+																	<div className="flex flex-col gap-2 min-w-0 flex-1">
 																		<span className="text-base flex items-center gap-2 font-medium leading-none flex-wrap">
 																			{service.name}
+																			<StatusTooltip status={service.status} />
 																		</span>
 																		{service.description && (
-																			<span className="text-sm font-medium text-muted-foreground">
+																			<span className="text-sm font-medium text-muted-foreground truncate">
 																				{service.description}
 																			</span>
 																		)}
 																	</div>
 
-																	<span className="text-sm font-medium text-muted-foreground self-start">
+																	<span className="text-sm font-medium text-muted-foreground shrink-0">
 																		{service.type === "postgres" && (
 																			<PostgresqlIcon className="h-7 w-7" />
 																		)}
@@ -1551,38 +1695,63 @@ const EnvironmentPage = (
 															</CardTitle>
 														</CardHeader>
 														<CardFooter className="mt-auto">
-															<div className="space-y-1 text-sm w-full">
-																{service.serverName && (
-																	<div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-																		<ServerIcon className="size-3" />
-																		<span className="truncate">
-																			{service.serverName}
-																		</span>
-																	</div>
-																)}
-																<DateTooltip date={service.createdAt}>
-																	Created
-																</DateTooltip>
+															<div className="flex items-center justify-between w-full text-sm">
+																<div className="space-y-1 min-w-0 flex-1">
+																	{service.serverName && (
+																		<div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+																			<ServerIcon className="size-3 shrink-0" />
+																			<span className="truncate">
+																				{service.serverName}
+																			</span>
+																		</div>
+																	)}
+																	<DateTooltip date={service.createdAt}>
+																		Created
+																	</DateTooltip>
+																</div>
+																<div
+																	className={cn(
+																		"size-8 rounded-full p-0 transition-all duration-200 bg-background border flex items-center justify-center shrink-0",
+																		selectedServices.includes(service.id)
+																			? "opacity-100"
+																			: "opacity-0 group-hover:opacity-100",
+																	)}
+																	onClick={(e) =>
+																		handleServiceSelect(service.id, e)
+																	}
+																>
+																	<Checkbox
+																		checked={selectedServices.includes(
+																			service.id,
+																		)}
+																		className="data-[state=checked]:bg-primary"
+																	/>
+																</div>
 															</div>
 														</CardFooter>
 													</Card>
 												))}
-											</div>
 										</div>
-									)}
-								</div>
-							</>
-						</CardContent>
+								)}
+						</div>
 					</div>
-				</Card>
+					</div>
+				)}
 			</div>
+
+			{/* Hadron: Settings Overlay */}
+			<ProjectSettingsOverlay
+				projectId={projectId}
+				open={settingsOpen}
+				onClose={() => setSettingsOpen(false)}
+			/>
 		</div>
 	);
 };
 
 export default EnvironmentPage;
 EnvironmentPage.getLayout = (page: ReactElement) => {
-	return <DashboardLayout>{page}</DashboardLayout>;
+	return <EnvironmentLayout>{page}</EnvironmentLayout>;
 };
 
 export async function getServerSideProps(

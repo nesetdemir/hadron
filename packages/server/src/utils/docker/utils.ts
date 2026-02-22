@@ -357,10 +357,19 @@ export const prepareEnvironmentVariables = (
 	serviceEnv: string | null,
 	projectEnv?: string | null,
 	environmentEnv?: string | null,
+	siblingServicesEnv?: Record<string, string>,
 ) => {
 	const projectVars = parse(projectEnv ?? "");
 	const environmentVars = parse(environmentEnv ?? "");
 	const serviceVars = parse(serviceEnv ?? "");
+
+	// Pre-parse sibling service env vars for cross-service references
+	const siblingParsed = new Map<string, Record<string, string>>();
+	if (siblingServicesEnv) {
+		for (const [name, envStr] of Object.entries(siblingServicesEnv)) {
+			siblingParsed.set(name.toLowerCase(), parse(envStr));
+		}
+	}
 
 	const resolvedVars = Object.entries(serviceVars).map(([key, value]) => {
 		let resolvedValue = value;
@@ -393,6 +402,21 @@ export const prepareEnvironmentVariables = (
 			);
 		}
 
+		// Replace cross-service references: ${{ServiceName.VAR}}
+		if (siblingParsed.size > 0) {
+			resolvedValue = resolvedValue.replace(
+				/\$\{\{([^.}]+)\.([^}]+)\}\}/g,
+				(match, serviceName, varName) => {
+					const svcVars = siblingParsed.get(serviceName.toLowerCase());
+					if (svcVars && svcVars[varName] !== undefined) {
+						return svcVars[varName];
+					}
+					// Not a cross-service ref, leave for self-reference resolution
+					return match;
+				},
+			);
+		}
+
 		// Replace self-references (service variables)
 		resolvedValue = resolvedValue.replace(/\$\{\{(.*?)\}\}/g, (_, ref) => {
 			if (serviceVars[ref] !== undefined) {
@@ -411,11 +435,13 @@ export const prepareEnvironmentVariablesForShell = (
 	serviceEnv: string | null,
 	projectEnv?: string | null,
 	environmentEnv?: string | null,
+	siblingServicesEnv?: Record<string, string>,
 ): string[] => {
 	const envVars = prepareEnvironmentVariables(
 		serviceEnv,
 		projectEnv,
 		environmentEnv,
+		siblingServicesEnv,
 	);
 	// Using shell-quote library to properly escape shell arguments
 	// This is the standard way to handle special characters in shell commands
@@ -437,8 +463,9 @@ export const getEnviromentVariablesObject = (
 	input: string | null,
 	projectEnv?: string | null,
 	environmentEnv?: string | null,
+	siblingServicesEnv?: Record<string, string>,
 ) => {
-	const envs = prepareEnvironmentVariables(input, projectEnv, environmentEnv);
+	const envs = prepareEnvironmentVariables(input, projectEnv, environmentEnv, siblingServicesEnv);
 
 	const jsonObject: Record<string, string> = {};
 

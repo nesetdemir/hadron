@@ -133,6 +133,7 @@ interface Props extends ReactCodeMirrorProps {
 	language?: "yaml" | "json" | "properties" | "shell";
 	lineWrapping?: boolean;
 	lineNumbers?: boolean;
+	additionalExtensions?: ReactCodeMirrorProps["extensions"];
 }
 
 export const CodeEditor = ({
@@ -140,6 +141,7 @@ export const CodeEditor = ({
 	wrapperClassName,
 	language = "yaml",
 	lineNumbers = true,
+	additionalExtensions,
 	...props
 }: Props) => {
 	const { resolvedTheme } = useTheme();
@@ -168,6 +170,7 @@ export const CodeEditor = ({
 								override: [dockerComposeComplete],
 							})
 						: [],
+					...(additionalExtensions || []),
 				]}
 				{...props}
 				editable={!props.disabled}

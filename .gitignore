@@ -44,3 +44,6 @@ yarn-error.log*
 
 
 .db
+# Hadron Swarm state
+.swarm/
+CLAUDE.md

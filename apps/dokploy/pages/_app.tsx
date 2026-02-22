@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "@/styles/hadron-theme.css";
 
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
@@ -38,7 +39,7 @@ const MyApp = ({
 				`}
 			</style>
 			<Head>
-				<title>Dokploy</title>
+				<title>Hadron</title>
 			</Head>
 			<ThemeProvider
 				attribute="class"

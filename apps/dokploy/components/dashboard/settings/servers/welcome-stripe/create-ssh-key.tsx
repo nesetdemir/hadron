@@ -36,7 +36,7 @@ export const CreateSSHKey = () => {
 				});
 				await mutateAsync({
 					name: "dokploy-cloud-ssh-key",
-					description: "Used on Dokploy Cloud",
+					description: "Used on Hadron Cloud",
 					privateKey: keys.privateKey,
 					publicKey: keys.publicKey,
 					organizationId: "",
@@ -172,11 +172,10 @@ export const CreateSSHKey = () => {
 											etc.)
 										</p>
 										<Link
-											href="https://docs.dokploy.com/docs/core/multi-server/instructions#requirements"
-											target="_blank"
-											className="text-primary flex flex-row gap-2 mt-2"
+											href="#"
+											className="text-primary flex flex-row gap-2 mt-2 hidden"
 										>
-											View Tutorial <ExternalLinkIcon className="size-4" />
+											View Tutorial
 										</Link>
 									</div>
 								)}

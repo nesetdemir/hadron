@@ -20,7 +20,7 @@ import {
 
 export const sendDockerCleanupNotifications = async (
 	organizationId: string,
-	message = "Docker cleanup for dokploy",
+	message = "Docker cleanup for Hadron",
 ) => {
 	const date = new Date();
 	const unixDate = ~~(Number(date) / 1000);
@@ -67,7 +67,7 @@ export const sendDockerCleanupNotifications = async (
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Docker cleanup for dokploy",
+						"Docker cleanup for Hadron",
 						template,
 					);
 				}
@@ -75,7 +75,7 @@ export const sendDockerCleanupNotifications = async (
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Docker cleanup for dokploy",
+						"Docker cleanup for Hadron",
 						template,
 					);
 				}
@@ -111,7 +111,7 @@ export const sendDockerCleanupNotifications = async (
 					],
 					timestamp: date.toISOString(),
 					footer: {
-						text: "Dokploy Docker Cleanup Notification",
+						text: "Hadron Docker Cleanup Notification",
 					},
 				});
 			}
