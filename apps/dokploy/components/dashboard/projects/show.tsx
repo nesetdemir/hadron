@@ -93,6 +93,9 @@ const SORT_OPTIONS = [
 	{ value: "services-asc", label: "Least Services" },
 ];
 
+// Dokploy marks a successfully deployed service as "done", not "running".
+const isOnline = (status: string) => status === "running" || status === "done";
+
 function collectProjectServices(
 	environments: Array<{
 		name: string;
@@ -115,42 +118,42 @@ function collectProjectServices(
 		for (const app of env.applications) {
 			icons.push({ type: "application", status: app.applicationStatus });
 			total++;
-			if (app.applicationStatus === "running") running++;
+			if (isOnline(app.applicationStatus)) running++;
 		}
 		for (const db of env.postgres) {
 			icons.push({ type: "postgres", status: db.applicationStatus });
 			total++;
-			if (db.applicationStatus === "running") running++;
+			if (isOnline(db.applicationStatus)) running++;
 		}
 		for (const db of env.mysql) {
 			icons.push({ type: "mysql", status: db.applicationStatus });
 			total++;
-			if (db.applicationStatus === "running") running++;
+			if (isOnline(db.applicationStatus)) running++;
 		}
 		for (const db of env.mariadb) {
 			icons.push({ type: "mariadb", status: db.applicationStatus });
 			total++;
-			if (db.applicationStatus === "running") running++;
+			if (isOnline(db.applicationStatus)) running++;
 		}
 		for (const db of env.mongo) {
 			icons.push({ type: "mongo", status: db.applicationStatus });
 			total++;
-			if (db.applicationStatus === "running") running++;
+			if (isOnline(db.applicationStatus)) running++;
 		}
 		for (const db of env.redis) {
 			icons.push({ type: "redis", status: db.applicationStatus });
 			total++;
-			if (db.applicationStatus === "running") running++;
+			if (isOnline(db.applicationStatus)) running++;
 		}
 		for (const db of env.libsql) {
 			icons.push({ type: "libsql", status: db.applicationStatus });
 			total++;
-			if (db.applicationStatus === "running") running++;
+			if (isOnline(db.applicationStatus)) running++;
 		}
 		for (const comp of env.compose) {
 			icons.push({ type: "compose", status: comp.composeStatus });
 			total++;
-			if (comp.composeStatus === "running") running++;
+			if (isOnline(comp.composeStatus)) running++;
 		}
 	}
 

@@ -1,39 +1,43 @@
 /*
  * Hadron Theme - Railway-inspired sophisticated color palette
  * This file overrides Dokploy's default CSS variables for the Hadron brand.
- * Upstream compatibility: Only globals.css has a single import line pointing here.
+ * Imported from pages/_app.tsx after globals.css so these unlayered values win.
+ *
+ * Variables read through `@theme inline` in globals.css (shadcn v4) must be
+ * full colors, so they are wrapped in hsl(). The chart, hadron-* and
+ * destructive-foreground tokens are still read as hsl(var(--x)) and stay bare.
  */
 
 :root {
 	/* Hadron Light Theme */
-	--background: 0 0% 99%;
-	--foreground: 225 15% 12%;
+	--background: hsl(0 0% 99%);
+	--foreground: hsl(225 15% 12%);
 
-	--card: 0 0% 100%;
-	--card-foreground: 225 15% 12%;
+	--card: hsl(0 0% 100%);
+	--card-foreground: hsl(225 15% 12%);
 
-	--popover: 0 0% 100%;
-	--popover-foreground: 225 15% 12%;
+	--popover: hsl(0 0% 100%);
+	--popover-foreground: hsl(225 15% 12%);
 
 	/* Hadron Purple Accent */
-	--primary: 252 56% 57%;
-	--primary-foreground: 0 0% 100%;
+	--primary: hsl(252 56% 57%);
+	--primary-foreground: hsl(0 0% 100%);
 
-	--secondary: 240 6% 95%;
-	--secondary-foreground: 225 15% 12%;
+	--secondary: hsl(240 6% 95%);
+	--secondary-foreground: hsl(225 15% 12%);
 
-	--muted: 240 6% 95%;
-	--muted-foreground: 225 8% 50%;
+	--muted: hsl(240 6% 95%);
+	--muted-foreground: hsl(225 8% 50%);
 
-	--accent: 252 40% 95%;
-	--accent-foreground: 252 56% 45%;
+	--accent: hsl(252 40% 95%);
+	--accent-foreground: hsl(252 56% 45%);
 
-	--destructive: 0 72% 51%;
+	--destructive: hsl(0 72% 51%);
 	--destructive-foreground: 0 0% 100%;
 
-	--border: 225 10% 90%;
-	--input: 225 10% 90%;
-	--ring: 252 56% 57%;
+	--border: hsl(225 10% 90%);
+	--input: hsl(225 10% 90%);
+	--ring: hsl(252 56% 57%);
 
 	--radius: 0.5rem;
 	--overlay: rgba(0, 0, 0, 0.15);
@@ -47,13 +51,14 @@
 
 	/* Sidebar - clean, subtle */
 	--sidebar-background: 240 5% 97%;
-	--sidebar-foreground: 225 12% 30%;
-	--sidebar-primary: 252 56% 57%;
-	--sidebar-primary-foreground: 0 0% 100%;
-	--sidebar-accent: 252 30% 94%;
-	--sidebar-accent-foreground: 252 56% 45%;
-	--sidebar-border: 225 10% 91%;
-	--sidebar-ring: 252 56% 57%;
+	--sidebar: hsl(240 5% 97%);
+	--sidebar-foreground: hsl(225 12% 30%);
+	--sidebar-primary: hsl(252 56% 57%);
+	--sidebar-primary-foreground: hsl(0 0% 100%);
+	--sidebar-accent: hsl(252 30% 94%);
+	--sidebar-accent-foreground: hsl(252 56% 45%);
+	--sidebar-border: hsl(225 10% 91%);
+	--sidebar-ring: hsl(252 56% 57%);
 
 	/* Hadron custom tokens */
 	--hadron-success: 152 60% 42%;
@@ -65,34 +70,34 @@
 
 .dark {
 	/* Hadron Dark Theme - Railway-inspired deep dark */
-	--background: 225 20% 7%;
-	--foreground: 225 10% 93%;
+	--background: hsl(225 20% 7%);
+	--foreground: hsl(225 10% 93%);
 
-	--card: 225 18% 10%;
-	--card-foreground: 225 10% 93%;
+	--card: hsl(225 18% 10%);
+	--card-foreground: hsl(225 10% 93%);
 
-	--popover: 225 20% 9%;
-	--popover-foreground: 225 10% 93%;
+	--popover: hsl(225 20% 9%);
+	--popover-foreground: hsl(225 10% 93%);
 
 	/* Purple accent stays vibrant in dark mode */
-	--primary: 252 56% 63%;
-	--primary-foreground: 225 20% 7%;
+	--primary: hsl(252 56% 63%);
+	--primary-foreground: hsl(225 20% 7%);
 
-	--secondary: 225 15% 15%;
-	--secondary-foreground: 225 10% 85%;
+	--secondary: hsl(225 15% 15%);
+	--secondary-foreground: hsl(225 10% 85%);
 
-	--muted: 225 15% 13%;
-	--muted-foreground: 225 8% 55%;
+	--muted: hsl(225 15% 13%);
+	--muted-foreground: hsl(225 8% 55%);
 
-	--accent: 252 30% 18%;
-	--accent-foreground: 252 56% 70%;
+	--accent: hsl(252 30% 18%);
+	--accent-foreground: hsl(252 56% 70%);
 
-	--destructive: 0 72% 51%;
+	--destructive: hsl(0 72% 51%);
 	--destructive-foreground: 0 0% 100%;
 
-	--border: 225 15% 16%;
-	--input: 225 15% 14%;
-	--ring: 252 56% 63%;
+	--border: hsl(225 15% 16%);
+	--input: hsl(225 15% 14%);
+	--ring: hsl(252 56% 63%);
 
 	--overlay: rgba(0, 0, 0, 0.6);
 
@@ -105,13 +110,14 @@
 
 	/* Sidebar - deep, immersive */
 	--sidebar-background: 225 22% 8%;
-	--sidebar-foreground: 225 10% 80%;
-	--sidebar-primary: 252 56% 63%;
-	--sidebar-primary-foreground: 0 0% 100%;
-	--sidebar-accent: 252 25% 16%;
-	--sidebar-accent-foreground: 252 56% 75%;
-	--sidebar-border: 225 15% 14%;
-	--sidebar-ring: 252 56% 63%;
+	--sidebar: hsl(225 22% 8%);
+	--sidebar-foreground: hsl(225 10% 80%);
+	--sidebar-primary: hsl(252 56% 63%);
+	--sidebar-primary-foreground: hsl(0 0% 100%);
+	--sidebar-accent: hsl(252 25% 16%);
+	--sidebar-accent-foreground: hsl(252 56% 75%);
+	--sidebar-border: hsl(225 15% 14%);
+	--sidebar-ring: hsl(252 56% 63%);
 
 	/* Hadron custom tokens */
 	--hadron-success: 152 55% 48%;
@@ -131,7 +137,7 @@
 }
 
 .hadron-log-info {
-	color: hsl(var(--muted-foreground));
+	color: var(--muted-foreground);
 }
 
 .hadron-log-debug {
@@ -140,25 +146,25 @@
 
 /* Service Graph Canvas */
 .hadron-canvas {
-	background-color: hsl(var(--background));
+	background-color: var(--background);
 	background-image:
-		radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px);
+		radial-gradient(circle, var(--border) 1px, transparent 1px);
 	background-size: 24px 24px;
 }
 
 .dark .hadron-canvas {
 	background-image:
-		radial-gradient(circle, hsl(var(--border) / 0.8) 1px, transparent 1px);
+		radial-gradient(circle, color-mix(in oklab, var(--border) 80%, transparent) 1px, transparent 1px);
 }
 
 /* Node glow effect on hover */
 .hadron-node-glow {
-	box-shadow: 0 0 0 1px hsl(var(--border)),
+	box-shadow: 0 0 0 1px var(--border),
 		0 4px 12px hsl(var(--hadron-glow));
 	transition: box-shadow 0.2s ease;
 }
 
 .hadron-node-glow:hover {
-	box-shadow: 0 0 0 1px hsl(var(--primary)),
+	box-shadow: 0 0 0 1px var(--primary),
 		0 4px 20px hsl(var(--hadron-glow));
 }

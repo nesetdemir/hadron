@@ -42,7 +42,7 @@ export function ServiceEdge({
 				path={edgePath}
 				markerEnd={markerEnd}
 				style={{
-					stroke: "hsl(var(--muted-foreground) / 0.45)",
+					stroke: "color-mix(in oklab, var(--muted-foreground) 45%, transparent)",
 					strokeWidth: 2,
 					strokeDasharray: "6 4",
 					...style,

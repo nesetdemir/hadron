@@ -189,7 +189,7 @@ export function ServiceGraphCanvas({
 					gap={24}
 					size={0.8}
 					className="!bg-transparent"
-					color="hsl(var(--muted-foreground) / 0.15)"
+					color="color-mix(in oklab, var(--muted-foreground) 15%, transparent)"
 				/>
 				<Controls
 					className="!bg-card !border-border !rounded-lg !shadow-xs [&>button]:!bg-card [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-secondary"
@@ -197,8 +197,8 @@ export function ServiceGraphCanvas({
 				/>
 				<MiniMap
 					className="!bg-card !border-border !rounded-lg"
-					nodeColor="hsl(var(--primary) / 0.8)"
-					maskColor="hsl(var(--background) / 0.7)"
+					nodeColor="color-mix(in oklab, var(--primary) 80%, transparent)"
+					maskColor="color-mix(in oklab, var(--background) 70%, transparent)"
 				/>
 			</ReactFlow>
 		</div>
