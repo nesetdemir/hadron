@@ -9,26 +9,38 @@ import { clusterRouter } from "./routers/cluster";
 import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
 import { destinationRouter } from "./routers/destination";
+import { dnsProviderRouter } from "./routers/dns-provider";
 import { dockerRouter } from "./routers/docker";
+import { dockerDiskUsageRouter } from "./routers/docker-disk-usage";
+import { dockerImageRouter } from "./routers/docker-image";
+import { dockerVolumeRouter } from "./routers/docker-volume";
 import { domainRouter } from "./routers/domain";
 import { environmentRouter } from "./routers/environment";
 import { gitProviderRouter } from "./routers/git-provider";
 import { giteaRouter } from "./routers/gitea";
 import { githubRouter } from "./routers/github";
 import { gitlabRouter } from "./routers/gitlab";
+import { libsqlRouter } from "./routers/libsql";
 import { mariadbRouter } from "./routers/mariadb";
 import { mongoRouter } from "./routers/mongo";
 import { mountRouter } from "./routers/mount";
 import { mysqlRouter } from "./routers/mysql";
+import { networkRouter } from "./routers/network";
 import { notificationRouter } from "./routers/notification";
 import { organizationRouter } from "./routers/organization";
+import { overviewRouter } from "./routers/overview";
 import { patchRouter } from "./routers/patch";
-import { licenseKeyRouter } from "./routers/proprietary/license-key";
-import { ssoRouter } from "./routers/proprietary/sso";
 import { portRouter } from "./routers/port";
 import { postgresRouter } from "./routers/postgres";
 import { previewDeploymentRouter } from "./routers/preview-deployment";
 import { projectRouter } from "./routers/project";
+import { auditLogRouter } from "./routers/proprietary/audit-log";
+import { customRoleRouter } from "./routers/proprietary/custom-role";
+import { forwardAuthRouter } from "./routers/proprietary/forward-auth";
+import { licenseKeyRouter } from "./routers/proprietary/license-key";
+import { scimRouter } from "./routers/proprietary/scim";
+import { ssoRouter } from "./routers/proprietary/sso";
+import { whitelabelingRouter } from "./routers/proprietary/whitelabeling";
 import { redirectsRouter } from "./routers/redirects";
 import { redisRouter } from "./routers/redis";
 import { registryRouter } from "./routers/registry";
@@ -40,7 +52,9 @@ import { settingsRouter } from "./routers/settings";
 import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
 import { swarmRouter } from "./routers/swarm";
+import { tagRouter } from "./routers/tag";
 import { userRouter } from "./routers/user";
+import { vaultProviderRouter } from "./routers/vault-provider";
 import { volumeBackupsRouter } from "./routers/volume-backups";
 /**
  * This is the primary router for your server.
@@ -50,48 +64,62 @@ import { volumeBackupsRouter } from "./routers/volume-backups";
 
 export const appRouter = createTRPCRouter({
 	admin: adminRouter,
-	docker: dockerRouter,
-	project: projectRouter,
 	application: applicationRouter,
-	mysql: mysqlRouter,
-	postgres: postgresRouter,
-	redis: redisRouter,
-	mongo: mongoRouter,
-	mariadb: mariadbRouter,
-	compose: composeRouter,
-	user: userRouter,
-	domain: domainRouter,
-	destination: destinationRouter,
 	backup: backupRouter,
-	deployment: deploymentRouter,
-	previewDeployment: previewDeploymentRouter,
-	mounts: mountRouter,
-	certificates: certificateRouter,
-	settings: settingsRouter,
-	security: securityRouter,
-	redirects: redirectsRouter,
-	port: portRouter,
-	registry: registryRouter,
-	cluster: clusterRouter,
-	notification: notificationRouter,
-	sshKey: sshRouter,
-	gitProvider: gitProviderRouter,
-	gitea: giteaRouter,
 	bitbucket: bitbucketRouter,
-	gitlab: gitlabRouter,
+	network: networkRouter,
+	certificates: certificateRouter,
+	cluster: clusterRouter,
+	compose: composeRouter,
+	deployment: deploymentRouter,
+	destination: destinationRouter,
+	dnsProvider: dnsProviderRouter,
+	docker: dockerRouter,
+	dockerDiskUsage: dockerDiskUsageRouter,
+	dockerImage: dockerImageRouter,
+	dockerVolume: dockerVolumeRouter,
+	domain: domainRouter,
+	gitea: giteaRouter,
+	gitProvider: gitProviderRouter,
 	github: githubRouter,
+	gitlab: gitlabRouter,
+	libsql: libsqlRouter,
+	mariadb: mariadbRouter,
+	mongo: mongoRouter,
+	mounts: mountRouter,
+	mysql: mysqlRouter,
+	notification: notificationRouter,
+	port: portRouter,
+	postgres: postgresRouter,
+	previewDeployment: previewDeploymentRouter,
+	project: projectRouter,
+	redirects: redirectsRouter,
+	redis: redisRouter,
+	registry: registryRouter,
+	security: securityRouter,
 	server: serverRouter,
+	settings: settingsRouter,
+	sshKey: sshRouter,
 	stripe: stripeRouter,
 	swarm: swarmRouter,
+	user: userRouter,
+	vaultProvider: vaultProviderRouter,
 	ai: aiRouter,
 	organization: organizationRouter,
 	licenseKey: licenseKeyRouter,
 	sso: ssoRouter,
+	scim: scimRouter,
+	forwardAuth: forwardAuthRouter,
+	whitelabeling: whitelabelingRouter,
+	customRole: customRoleRouter,
+	auditLog: auditLogRouter,
 	schedule: scheduleRouter,
 	rollback: rollbackRouter,
 	volumeBackups: volumeBackupsRouter,
 	environment: environmentRouter,
+	tag: tagRouter,
 	patch: patchRouter,
+	overview: overviewRouter,
 });
 
 // export type definition of API

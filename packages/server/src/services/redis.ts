@@ -6,16 +6,21 @@ import {
 } from "@dokploy/server/db/schema";
 import { generatePassword } from "@dokploy/server/templates";
 import { buildRedis } from "@dokploy/server/utils/databases/redis";
-import { pullImage } from "@dokploy/server/utils/docker/utils";
+import {
+	pullImage,
+	waitForSwarmServiceConvergence,
+} from "@dokploy/server/utils/docker/utils";
 import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import { quote } from "shell-quote";
+import type { z } from "zod";
 import { validUniqueServerAppName } from "./project";
 
 export type Redis = typeof redis.$inferSelect;
 
 // https://github.com/drizzle-team/drizzle-orm/discussions/1483#discussioncomment-7523881
-export const createRedis = async (input: typeof apiCreateRedis._type) => {
+export const createRedis = async (input: z.infer<typeof apiCreateRedis>) => {
 	const appName = buildAppName("redis", input.appName);
 
 	const valid = await validUniqueServerAppName(appName);
@@ -109,7 +114,7 @@ export const deployRedis = async (
 		if (redis.serverId) {
 			await execAsyncRemote(
 				redis.serverId,
-				`docker pull ${redis.dockerImage}`,
+				`docker pull ${quote([redis.dockerImage])}`,
 				onData,
 			);
 		} else {
@@ -117,6 +122,7 @@ export const deployRedis = async (
 		}
 
 		await buildRedis(redis);
+		await waitForSwarmServiceConvergence(redis.appName, redis.serverId);
 		await updateRedisById(redisId, {
 			applicationStatus: "done",
 		});

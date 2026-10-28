@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -160,7 +160,7 @@ export const RandomizeCompose = ({ composeId }: Props) => {
 								control={form.control}
 								name="randomize"
 								render={({ field }) => (
-									<FormItem className="mt-4 flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+									<FormItem className="mt-4 flex flex-row items-center justify-between rounded-lg border p-3 shadow-xs">
 										<div className="space-y-0.5">
 											<FormLabel>Apply Randomize</FormLabel>
 											<FormDescription>

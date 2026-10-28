@@ -7,6 +7,7 @@ import {
 } from "@dokploy/server/services/gitea";
 import type { InferResultType } from "@dokploy/server/types/with";
 import { TRPCError } from "@trpc/server";
+import { quote } from "shell-quote";
 
 export const getErrorCloneRequirements = (entity: {
 	giteaRepository?: string | null;
@@ -170,14 +171,14 @@ export const cloneGiteaRepository = async ({
 
 	const repoClone = `${giteaOwner}/${giteaRepository}.git`;
 	const cloneUrl = buildGiteaCloneUrl(
-		giteaProvider.giteaUrl,
+		giteaProvider.giteaInternalUrl || giteaProvider.giteaUrl,
 		giteaProvider.accessToken!,
 		giteaOwner!,
 		giteaRepository!,
 	);
 
-	command += `echo "Cloning Repo ${repoClone} to ${outputPath}: ✅";`;
-	command += `git clone --branch ${giteaBranch} --depth 1 ${enableSubmodules ? "--recurse-submodules" : ""} ${cloneUrl} ${outputPath} --progress;`;
+	command += `echo ${quote([`Cloning Repo ${repoClone} to ${outputPath}: ✅`])};`;
+	command += `git clone --branch ${quote([String(giteaBranch ?? "")])} --depth 1 ${enableSubmodules ? "--recurse-submodules" : ""} ${quote([String(cloneUrl ?? "")])} ${quote([String(outputPath ?? "")])} --progress;`;
 	return command;
 };
 
@@ -211,7 +212,10 @@ export const testGiteaConnection = async (input: { giteaId: string }) => {
 			});
 		}
 
-		const baseUrl = provider.giteaUrl.replace(/\/+$/, "");
+		const baseUrl = (provider.giteaInternalUrl || provider.giteaUrl).replace(
+			/\/+$/,
+			"",
+		);
 
 		// Use /user/repos to get authenticated user's repositories with pagination
 		let allRepos = 0;
@@ -268,7 +272,9 @@ export const getGiteaRepositories = async (giteaId?: string) => {
 	await refreshGiteaToken(giteaId);
 	const giteaProvider = await findGiteaById(giteaId);
 
-	const baseUrl = giteaProvider.giteaUrl.replace(/\/+$/, "");
+	const baseUrl = (
+		giteaProvider.giteaInternalUrl || giteaProvider.giteaUrl
+	).replace(/\/+$/, "");
 
 	// Use /user/repos to get authenticated user's repositories with pagination
 	let allRepositories: any[] = [];
@@ -333,7 +339,9 @@ export const getGiteaBranches = async (input: {
 
 	const giteaProvider = await findGiteaById(input.giteaId);
 
-	const baseUrl = giteaProvider.giteaUrl.replace(/\/+$/, "");
+	const baseUrl = (
+		giteaProvider.giteaInternalUrl || giteaProvider.giteaUrl
+	).replace(/\/+$/, "");
 
 	// Handle pagination for branches
 	let allBranches: any[] = [];

@@ -6,6 +6,7 @@ import {
 } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 import { IS_CLOUD } from "../constants";
 
 export type Registry = typeof registry.$inferSelect;
@@ -15,7 +16,7 @@ function shEscape(s: string | undefined): string {
 	return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
-function safeDockerLoginCommand(
+export function safeDockerLoginCommand(
 	registry: string | undefined,
 	user: string | undefined,
 	pass: string | undefined,
@@ -26,8 +27,18 @@ function safeDockerLoginCommand(
 	return `printf %s ${escapedPassword} | docker login ${escapedRegistry} -u ${escapedUser} --password-stdin`;
 }
 
+function sanitizeRegistryError(
+	error: unknown,
+	password: string | null | undefined,
+): string {
+	const message =
+		error instanceof Error ? error.message : "Error with registry login";
+	if (!password) return message;
+	return message.split(password).join("***");
+}
+
 export const createRegistry = async (
-	input: typeof apiCreateRegistry._type,
+	input: z.infer<typeof apiCreateRegistry>,
 	organizationId: string,
 ) => {
 	return await db.transaction(async (tx) => {
@@ -58,10 +69,15 @@ export const createRegistry = async (
 			input.username,
 			input.password,
 		);
-		if (input.serverId && input.serverId !== "none") {
-			await execAsyncRemote(input.serverId, loginCommand);
-		} else if (newRegistry.registryType === "cloud") {
-			await execAsync(loginCommand);
+		try {
+			if (input.serverId && input.serverId !== "none") {
+				await execAsyncRemote(input.serverId, loginCommand);
+			} else if (newRegistry.registryType === "cloud") {
+				await execAsync(loginCommand);
+			}
+		} catch (error) {
+			const sanitized = sanitizeRegistryError(error, input.password);
+			throw new TRPCError({ code: "BAD_REQUEST", message: sanitized });
 		}
 
 		return newRegistry;
@@ -84,7 +100,7 @@ export const removeRegistry = async (registryId: string) => {
 		}
 
 		if (!IS_CLOUD) {
-			await execAsync(`docker logout ${response.registryUrl}`);
+			await execAsync(`docker logout ${shEscape(response.registryUrl)}`);
 		}
 
 		return response;
@@ -128,16 +144,24 @@ export const updateRegistry = async (
 			});
 		}
 
-		if (registryData?.serverId && registryData?.serverId !== "none") {
-			await execAsyncRemote(registryData.serverId, loginCommand);
-		} else if (response?.registryType === "cloud") {
-			await execAsync(loginCommand);
+		try {
+			if (registryData?.serverId && registryData?.serverId !== "none") {
+				await execAsyncRemote(registryData.serverId, loginCommand);
+			} else if (response?.registryType === "cloud") {
+				await execAsync(loginCommand);
+			}
+		} catch (execError) {
+			throw new Error(sanitizeRegistryError(execError, response?.password));
 		}
 
 		return response;
 	} catch (error) {
 		const message =
-			error instanceof Error ? error.message : "Error updating this registry";
+			error instanceof TRPCError
+				? error.message
+				: error instanceof Error
+					? error.message
+					: "Error updating this registry";
 		throw new TRPCError({
 			code: "BAD_REQUEST",
 			message,
@@ -151,6 +175,19 @@ export const findRegistryById = async (registryId: string) => {
 		columns: {
 			password: false,
 		},
+	});
+	if (!registryResponse) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Registry not found",
+		});
+	}
+	return registryResponse;
+};
+
+export const findRegistryByIdWithCredentials = async (registryId: string) => {
+	const registryResponse = await db.query.registry.findFirst({
+		where: eq(registry.registryId, registryId),
 	});
 	if (!registryResponse) {
 		throw new TRPCError({

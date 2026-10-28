@@ -1,5 +1,12 @@
 import { relations } from "drizzle-orm";
-import { boolean, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+	boolean,
+	integer,
+	jsonb,
+	pgTable,
+	text,
+	timestamp,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -66,6 +73,42 @@ export const webServerSettings = pgTable("webServerSettings", {
 				},
 			},
 		}),
+	// Whitelabeling Configuration (Enterprise / Proprietary)
+	whitelabelingConfig: jsonb("whitelabelingConfig")
+		.$type<{
+			appName: string | null;
+			appDescription: string | null;
+			logoUrl: string | null;
+			faviconUrl: string | null;
+			customCss: string | null;
+			loginLogoUrl: string | null;
+			supportUrl: string | null;
+			docsUrl: string | null;
+			errorPageTitle: string | null;
+			errorPageDescription: string | null;
+			footerText: string | null;
+			ogImageUrl: string | null;
+		}>()
+		.default({
+			appName: null,
+			appDescription: null,
+			logoUrl: null,
+			faviconUrl: null,
+			customCss: null,
+			loginLogoUrl: null,
+			supportUrl: null,
+			docsUrl: null,
+			errorPageTitle: null,
+			errorPageDescription: null,
+			footerText: null,
+			ogImageUrl: null,
+		}),
+	// Deployment Configuration (self-hosted only)
+	remoteServersOnly: boolean("remoteServersOnly").notNull().default(false),
+	// Concurrent builds on the local web server
+	buildsConcurrency: integer("buildsConcurrency").notNull().default(1),
+	// Auth Configuration (self-hosted only)
+	enforceSSO: boolean("enforceSSO").notNull().default(false),
 	// Cache Cleanup Configuration
 	cleanupCacheApplications: boolean("cleanupCacheApplications")
 		.notNull()
@@ -125,6 +168,13 @@ export const apiUpdateWebServerSettings = createSchema.partial().extend({
 	cleanupCacheApplications: z.boolean().optional(),
 	cleanupCacheOnPreviews: z.boolean().optional(),
 	cleanupCacheOnCompose: z.boolean().optional(),
+	remoteServersOnly: z.boolean().optional(),
+	enforceSSO: z.boolean().optional(),
+	buildsConcurrency: z.number().int().min(1).max(100).optional(),
+});
+
+export const apiUpdateWebServerBuildsConcurrency = z.object({
+	buildsConcurrency: z.number().int().min(1).max(100),
 });
 
 export const apiAssignDomain = z
@@ -152,6 +202,33 @@ export const apiSaveSSHKey = z
 export const apiUpdateDockerCleanup = z.object({
 	enableDockerCleanup: z.boolean(),
 	serverId: z.string().optional(),
+});
+
+// Whitelabeling validation schemas
+const safeUrl = z
+	.string()
+	.refine((url) => /^https?:\/\//i.test(url), {
+		message: "Only http:// and https:// URLs are allowed",
+	})
+	.nullable();
+
+export const whitelabelingConfigSchema = z.object({
+	appName: z.string().nullable(),
+	appDescription: z.string().nullable(),
+	logoUrl: safeUrl,
+	faviconUrl: safeUrl,
+	customCss: z.string().nullable(),
+	loginLogoUrl: safeUrl,
+	supportUrl: safeUrl,
+	docsUrl: safeUrl,
+	errorPageTitle: z.string().nullable(),
+	errorPageDescription: z.string().nullable(),
+	footerText: z.string().nullable(),
+	ogImageUrl: safeUrl,
+});
+
+export const apiUpdateWhitelabeling = z.object({
+	whitelabelingConfig: whitelabelingConfigSchema,
 });
 
 export const apiUpdateWebServerMonitoring = z.object({

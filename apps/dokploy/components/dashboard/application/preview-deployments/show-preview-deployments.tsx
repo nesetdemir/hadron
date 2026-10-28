@@ -1,4 +1,3 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import {
 	ExternalLink,
 	FileText,
@@ -9,6 +8,7 @@ import {
 	RocketIcon,
 	Trash2,
 } from "lucide-react";
+import { Tooltip as TooltipPrimitive } from "radix-ui";
 import { toast } from "sonner";
 import { GithubIcon } from "@/components/icons/data-tools-icons";
 import { DateTooltip } from "@/components/shared/date-tooltip";
@@ -43,7 +43,7 @@ interface Props {
 export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 	const { data } = api.application.one.useQuery({ applicationId });
 
-	const { mutateAsync: deletePreviewDeployment, isLoading } =
+	const { mutateAsync: deletePreviewDeployment, isPending } =
 		api.previewDeployment.delete.useMutation();
 
 	const { mutateAsync: redeployPreviewDeployment } =
@@ -57,8 +57,7 @@ export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 		{ applicationId },
 		{
 			enabled: !!applicationId,
-			refetchInterval: (data) =>
-				data?.some((d) => d.previewStatus === "running") ? 2000 : false,
+			refetchInterval: 2000,
 		},
 	);
 
@@ -133,7 +132,7 @@ export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 											<div className="p-4">
 												<div className="flex items-start justify-between mb-3">
 													<div className="flex items-start gap-3">
-														<GitPullRequest className="size-5 text-muted-foreground mt-1 flex-shrink-0" />
+														<GitPullRequest className="size-5 text-muted-foreground mt-1 shrink-0" />
 														<div>
 															<div className="font-medium text-sm">
 																{deployment.pullRequestTitle}
@@ -153,7 +152,7 @@ export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 												</div>
 
 												<div className="pl-8 space-y-3">
-													<div className="relative flex-grow">
+													<div className="relative grow">
 														<Input
 															value={deploymentUrl}
 															readOnly
@@ -245,7 +244,7 @@ export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 																		<TooltipPrimitive.Portal>
 																			<TooltipContent
 																				sideOffset={5}
-																				className="z-[60]"
+																				className="z-60"
 																			>
 																				<p>
 																					Rebuild the preview deployment without
@@ -282,7 +281,7 @@ export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 															<Button
 																variant="ghost"
 																size="sm"
-																isLoading={isLoading}
+																isLoading={isPending}
 																className="text-red-600 hover:text-red-700 hover:bg-red-50"
 															>
 																<Trash2 className="size-4" />

@@ -192,7 +192,7 @@ export function ServiceGraphCanvas({
 					color="hsl(var(--muted-foreground) / 0.15)"
 				/>
 				<Controls
-					className="!bg-card !border-border !rounded-lg !shadow-sm [&>button]:!bg-card [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-secondary"
+					className="!bg-card !border-border !rounded-lg !shadow-xs [&>button]:!bg-card [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-secondary"
 					showInteractive={false}
 				/>
 				<MiniMap

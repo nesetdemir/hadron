@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import copy from "copy-to-clipboard";
 import { CopyIcon, DownloadIcon, Fingerprint, QrCode } from "lucide-react";
 import QRCode from "qrcode";
@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import {
 	InputOTP,
 	InputOTPGroup,
+	InputOTPSeparator,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
 import {
@@ -99,7 +100,7 @@ export const Enable2FA = () => {
 			});
 
 			if (result.error) {
-				if (result.error.code === "INVALID_TWO_FACTOR_AUTHENTICATION") {
+				if (result.error.code === "INVALID_CODE") {
 					toast.error("Invalid verification code");
 					return;
 				}
@@ -401,7 +402,7 @@ export const Enable2FA = () => {
 												<div className="grid grid-cols-2 gap-2">
 													{backupCodes.map((code, index) => (
 														<code
-															key={index}
+															key={`${code}-${index}`}
 															className="bg-muted p-2 rounded text-sm font-mono"
 														>
 															{code}
@@ -423,18 +424,21 @@ export const Enable2FA = () => {
 								)}
 							</div>
 
-							<div className="flex flex-col justify-center items-center">
+							<div className="flex flex-col gap-2">
 								<FormLabel>Verification Code</FormLabel>
 								<InputOTP
 									maxLength={6}
 									value={otpValue}
 									onChange={setOtpValue}
-									autoComplete="off"
+									autoFocus
 								>
 									<InputOTPGroup>
 										<InputOTPSlot index={0} />
 										<InputOTPSlot index={1} />
 										<InputOTPSlot index={2} />
+									</InputOTPGroup>
+									<InputOTPSeparator />
+									<InputOTPGroup>
 										<InputOTPSlot index={3} />
 										<InputOTPSlot index={4} />
 										<InputOTPSlot index={5} />

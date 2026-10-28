@@ -7,6 +7,7 @@ import {
 	Server,
 	Sparkles,
 	Stars,
+	X,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogTitle,
 	DialogTrigger,
@@ -45,7 +47,7 @@ export const UpdateServer = ({
 	const [isUpdateAvailable, setIsUpdateAvailable] = useState(
 		!!updateData?.updateAvailable,
 	);
-	const { mutateAsync: getUpdateData, isLoading } =
+	const { mutateAsync: getUpdateData, isPending } =
 		api.settings.getUpdateData.useMutation();
 	const { data: dokployVersion } = api.settings.getDokployVersion.useQuery();
 	const { data: releaseTag } = api.settings.getReleaseTag.useQuery();
@@ -99,7 +101,7 @@ export const UpdateServer = ({
 									size="sm"
 									onClick={() => onOpenChange?.(true)}
 								>
-									<Download className="h-4 w-4 flex-shrink-0" />
+									<Download className="h-4 w-4 shrink-0" />
 									{updateData ? (
 										<span className="font-medium truncate group-data-[collapsible=icon]:hidden">
 											Update Available
@@ -126,13 +128,13 @@ export const UpdateServer = ({
 					</TooltipProvider>
 				)}
 			</DialogTrigger>
-			<DialogContent className="max-w-lg">
-				<div className="flex items-center justify-between mb-8">
-					<DialogTitle className="text-2xl font-semibold">
+			<DialogContent className="max-w-lg" showCloseButton={false}>
+				<div className="flex items-center gap-2 mb-8">
+					<DialogTitle className="text-2xl font-semibold mr-auto">
 						Web Server Update
 					</DialogTitle>
 					{dokployVersion && (
-						<div className="flex items-center gap-1.5 rounded-full px-3 py-1 mr-2 bg-muted">
+						<div className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-muted">
 							<Server className="h-4 w-4 text-muted-foreground" />
 							<span className="text-sm text-muted-foreground">
 								{dokployVersion}{" "}
@@ -141,6 +143,12 @@ export const UpdateServer = ({
 							</span>
 						</div>
 					)}
+					<DialogClose asChild>
+						<Button variant="ghost" size="icon-sm" className="shrink-0">
+							<X />
+							<span className="sr-only">Close</span>
+						</Button>
+					</DialogClose>
 				</div>
 
 				{/* Initial state */}
@@ -196,7 +204,7 @@ export const UpdateServer = ({
 				)}
 
 				{/* Up to date state */}
-				{hasCheckedUpdate && !isUpdateAvailable && !isLoading && (
+				{hasCheckedUpdate && !isUpdateAvailable && !isPending && (
 					<div className="mb-8">
 						<div className="flex flex-col items-center gap-6 mb-6">
 							<div className="rounded-full p-4 bg-emerald-400/40">
@@ -215,7 +223,7 @@ export const UpdateServer = ({
 					</div>
 				)}
 
-				{hasCheckedUpdate && isLoading && (
+				{hasCheckedUpdate && isPending && (
 					<div className="mb-8">
 						<div className="flex flex-col items-center gap-6 mb-6">
 							<div className="rounded-full p-4 bg-[#5B9DFF]/40 text-foreground">
@@ -235,7 +243,7 @@ export const UpdateServer = ({
 				{isUpdateAvailable && (
 					<div className="rounded-lg bg-[#16254D] p-4 mb-8">
 						<div className="flex gap-2">
-							<Info className="h-5 w-5 flex-shrink-0 text-[#5B9DFF]" />
+							<Info className="h-5 w-5 shrink-0 text-[#5B9DFF]" />
 							<div className="text-[#5B9DFF]">
 								We recommend reviewing the{" "}
 								<Link
@@ -252,23 +260,23 @@ export const UpdateServer = ({
 				)}
 
 				<div className="flex items-center justify-between pt-2">
-					<ToggleAutoCheckUpdates disabled={isLoading} />
+					<ToggleAutoCheckUpdates disabled={isPending} />
 				</div>
 
-				<div className="space-y-4 flex items-center justify-end mt-4	">
+				<div className="flex items-center justify-end mt-4">
 					<div className="flex items-center gap-2">
 						<Button variant="outline" onClick={() => onOpenChange?.(false)}>
 							Cancel
 						</Button>
 						{isUpdateAvailable ? (
-							<UpdateWebServer />
+							<UpdateWebServer buttonClassName="w-auto" />
 						) : (
 							<Button
 								variant="secondary"
 								onClick={handleCheckUpdates}
-								disabled={isLoading}
+								disabled={isPending}
 							>
-								{isLoading ? (
+								{isPending ? (
 									<>
 										<RefreshCcw className="h-4 w-4 animate-spin" />
 										Checking for updates

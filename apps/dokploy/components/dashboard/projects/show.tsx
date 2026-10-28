@@ -2,7 +2,6 @@ import {
 	AlertTriangle,
 	ChevronDown,
 	CircuitBoard,
-	ExternalLinkIcon,
 	FolderInput,
 	GlobeIcon,
 	Loader2,
@@ -14,14 +13,16 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { StatusTooltip } from "@/components/shared/status-tooltip";
 import {
+	LibsqlIcon,
 	MariadbIcon,
 	MongodbIcon,
 	MysqlIcon,
 	PostgresqlIcon,
 	RedisIcon,
 } from "@/components/icons/data-tools-icons";
+import { TagBadge } from "@/components/shared/tag-badge";
+import { TagFilter } from "@/components/shared/tag-filter";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -37,7 +38,6 @@ import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -50,7 +50,15 @@ import { HandleProject } from "./handle-project";
 import { ProjectEnvironment } from "./project-environment";
 
 type ServiceIcon = {
-	type: "application" | "postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "compose";
+	type:
+		| "application"
+		| "postgres"
+		| "mysql"
+		| "mariadb"
+		| "mongo"
+		| "redis"
+		| "libsql"
+		| "compose";
 	status?: string;
 };
 
@@ -61,6 +69,7 @@ const SERVICE_ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
 	mariadb: MariadbIcon,
 	mongo: MongodbIcon,
 	redis: RedisIcon,
+	libsql: LibsqlIcon,
 	compose: ({ className }) => <CircuitBoard className={className} />,
 };
 
@@ -71,6 +80,7 @@ const SERVICE_ICON_COLORS: Record<string, { text: string; bg: string }> = {
 	mariadb: { text: "text-amber-700", bg: "bg-amber-700/10" },
 	mongo: { text: "text-green-600", bg: "bg-green-600/10" },
 	redis: { text: "text-red-500", bg: "bg-red-500/10" },
+	libsql: { text: "text-teal-500", bg: "bg-teal-500/10" },
 	compose: { text: "text-violet-500", bg: "bg-violet-500/10" },
 };
 
@@ -93,6 +103,7 @@ function collectProjectServices(
 		mysql: Array<{ applicationStatus: string }>;
 		postgres: Array<{ applicationStatus: string }>;
 		redis: Array<{ applicationStatus: string }>;
+		libsql: Array<{ applicationStatus: string }>;
 		compose: Array<{ composeStatus: string }>;
 	}>,
 ) {
@@ -131,6 +142,11 @@ function collectProjectServices(
 			total++;
 			if (db.applicationStatus === "running") running++;
 		}
+		for (const db of env.libsql) {
+			icons.push({ type: "libsql", status: db.applicationStatus });
+			total++;
+			if (db.applicationStatus === "running") running++;
+		}
 		for (const comp of env.compose) {
 			icons.push({ type: "compose", status: comp.composeStatus });
 			total++;
@@ -144,9 +160,10 @@ function collectProjectServices(
 export const ShowProjects = () => {
 	const utils = api.useUtils();
 	const router = useRouter();
-	const { data: auth } = api.user.get.useQuery();
-	const { data, isLoading } = api.project.all.useQuery();
+	const { data, isPending } = api.project.all.useQuery();
+	const { data: permissions } = api.user.getPermissions.useQuery();
 	const { mutateAsync } = api.project.remove.useMutation();
+	const { data: availableTags } = api.tag.all.useQuery();
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showSearch, setShowSearch] = useState(false);
@@ -162,6 +179,27 @@ export const ShowProjects = () => {
 	useEffect(() => {
 		localStorage.setItem("projectsSort", sortBy);
 	}, [sortBy]);
+
+	const [selectedTagIds, setSelectedTagIds] = useState<string[]>(() => {
+		if (typeof window !== "undefined") {
+			const saved = localStorage.getItem("projectsTagFilter");
+			return saved ? JSON.parse(saved) : [];
+		}
+		return [];
+	});
+
+	useEffect(() => {
+		localStorage.setItem("projectsTagFilter", JSON.stringify(selectedTagIds));
+	}, [selectedTagIds]);
+
+	useEffect(() => {
+		if (!availableTags) return;
+		const validIds = new Set(availableTags.map((t) => t.tagId));
+		setSelectedTagIds((prev) => {
+			const filtered = prev.filter((id) => validIds.has(id));
+			return filtered.length === prev.length ? prev : filtered;
+		});
+	}, [availableTags]);
 
 	useEffect(() => {
 		if (!router.isReady) return;
@@ -192,7 +230,7 @@ export const ShowProjects = () => {
 	const filteredProjects = useMemo(() => {
 		if (!data) return [];
 
-		const filtered = data.filter(
+		let filtered = data.filter(
 			(project) =>
 				project.name
 					.toLowerCase()
@@ -201,6 +239,15 @@ export const ShowProjects = () => {
 					?.toLowerCase()
 					.includes(debouncedSearchQuery.toLowerCase()),
 		);
+
+		// Filter by selected tags (OR logic: show projects with ANY selected tag)
+		if (selectedTagIds.length > 0) {
+			filtered = filtered.filter((project) =>
+				project.projectTags?.some((pt) =>
+					selectedTagIds.includes(pt.tag.tagId),
+				),
+			);
+		}
 
 		const [field, direction] = sortBy.split("-");
 		return [...filtered].sort((a, b) => {
@@ -218,6 +265,7 @@ export const ShowProjects = () => {
 						return (
 							total +
 							(env.applications?.length || 0) +
+							(env.libsql?.length || 0) +
 							(env.mariadb?.length || 0) +
 							(env.mongo?.length || 0) +
 							(env.mysql?.length || 0) +
@@ -230,6 +278,7 @@ export const ShowProjects = () => {
 						return (
 							total +
 							(env.applications?.length || 0) +
+							(env.libsql?.length || 0) +
 							(env.mariadb?.length || 0) +
 							(env.mongo?.length || 0) +
 							(env.mysql?.length || 0) +
@@ -246,7 +295,7 @@ export const ShowProjects = () => {
 			}
 			return direction === "asc" ? comparison : -comparison;
 		});
-	}, [data, debouncedSearchQuery, sortBy]);
+	}, [data, debouncedSearchQuery, sortBy, selectedTagIds]);
 
 	return (
 		<div className="pt-4 max-w-[1400px] mx-auto">
@@ -275,19 +324,26 @@ export const ShowProjects = () => {
 							<Search className="size-4" />
 						</Button>
 					)}
-					{(auth?.role === "owner" ||
-						auth?.role === "admin" ||
-						auth?.canCreateProjects) && (
-						<HandleProject />
-					)}
+					{permissions?.project.create && <HandleProject />}
 				</div>
 			</div>
 
 			{/* Subtitle: count + sort */}
 			<div className="flex items-center gap-3 text-sm text-muted-foreground mb-8">
 				<span>{filteredProjects.length} Projects</span>
+				<TagFilter
+					tags={
+						availableTags?.map((tag) => ({
+							id: tag.tagId,
+							name: tag.name,
+							color: tag.color || undefined,
+						})) || []
+					}
+					selectedTags={selectedTagIds}
+					onTagsChange={setSelectedTagIds}
+				/>
 				<DropdownMenu>
-					<DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground transition-colors outline-none">
+					<DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground transition-colors outline-hidden">
 						Sort By: {sortLabel}
 						<ChevronDown className="size-3.5" />
 					</DropdownMenuTrigger>
@@ -306,7 +362,7 @@ export const ShowProjects = () => {
 			</div>
 
 			{/* Content */}
-			{isLoading ? (
+			{isPending ? (
 				<div className="flex items-center justify-center gap-2 text-sm text-muted-foreground h-[50vh]">
 					<Loader2 className="animate-spin size-4" />
 					<span>Loading projects...</span>
@@ -323,6 +379,7 @@ export const ShowProjects = () => {
 							.map(
 								(env) =>
 									env.applications.length === 0 &&
+									env.libsql.length === 0 &&
 									env.mariadb.length === 0 &&
 									env.mongo.length === 0 &&
 									env.mysql.length === 0 &&
@@ -335,6 +392,7 @@ export const ShowProjects = () => {
 						const totalServices = project?.environments
 							.map(
 								(env) =>
+									env.libsql.length +
 									env.mariadb.length +
 									env.mongo.length +
 									env.mysql.length +
@@ -347,14 +405,6 @@ export const ShowProjects = () => {
 
 						const { icons: serviceIcons, running: runningServices } =
 							collectProjectServices(project.environments as any);
-
-						const haveServicesWithDomains = project?.environments
-							.map(
-								(env) =>
-									env.applications.length > 0 ||
-									env.compose.length > 0,
-							)
-							.some(Boolean);
 
 						const accessibleEnvironment =
 							project?.environments.find((env) => env.isDefault) ||
@@ -411,38 +461,7 @@ export const ShowProjects = () => {
 														projectId={project.projectId}
 													/>
 												</div>
-												{haveServicesWithDomains && (
-													<>
-														<DropdownMenuSeparator />
-														<DropdownMenuGroup>
-															<DropdownMenuLabel className="text-xs">
-																Domains
-															</DropdownMenuLabel>
-															{project.environments.map((env) =>
-																[...env.applications, ...env.compose].map((svc: any) =>
-																	svc.domains?.map((domain: any) => (
-																		<DropdownMenuItem
-																			key={domain.domainId}
-																			asChild
-																		>
-																			<a
-																				className="text-xs cursor-pointer justify-between"
-																				target="_blank"
-																				rel="noopener noreferrer"
-																				href={`${domain.https ? "https" : "http"}://${domain.host}${domain.path}`}
-																			>
-																				<span className="truncate">{domain.host}</span>
-																				<ExternalLinkIcon className="size-3 shrink-0 ml-2" />
-																			</a>
-																		</DropdownMenuItem>
-																	)),
-																),
-															)}
-														</DropdownMenuGroup>
-													</>
-												)}
-												{(auth?.role === "owner" ||
-													auth?.canDeleteProjects) && (
+												{permissions?.project.delete && (
 													<>
 														<DropdownMenuSeparator />
 														<div onClick={(e) => e.stopPropagation()}>
@@ -513,6 +532,18 @@ export const ShowProjects = () => {
 											</DropdownMenuContent>
 										</DropdownMenu>
 									</div>
+
+									{project.projectTags && project.projectTags.length > 0 && (
+										<div className="flex flex-wrap gap-1.5 px-4 pt-2">
+											{project.projectTags.map((pt) => (
+												<TagBadge
+													key={pt.tag.tagId}
+													name={pt.tag.name}
+													color={pt.tag.color}
+												/>
+											))}
+										</div>
+									)}
 
 									{/* No environments warning */}
 									{hasNoEnvironments && (

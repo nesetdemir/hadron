@@ -7,6 +7,7 @@ import {
 } from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
+import type { z } from "zod";
 import { generatePassword } from "../templates";
 import { removeService } from "../utils/docker/utils";
 import { removeDirectoryCode } from "../utils/filesystem/directory";
@@ -16,7 +17,7 @@ import { manageDomain } from "../utils/traefik/domain";
 import { findApplicationById } from "./application";
 import { removeDeploymentsByPreviewDeploymentId } from "./deployment";
 import { createDomain } from "./domain";
-import { type Github, getIssueComment } from "./github";
+import { findGithubById, getIssueComment } from "./github";
 import { getWebServerSettings } from "./web-server-settings";
 
 export type PreviewDeployment = typeof previewDeployments.$inferSelect;
@@ -29,13 +30,9 @@ export const findPreviewDeploymentById = async (
 		with: {
 			domain: true,
 			application: {
-				with: {
-					server: true,
-					environment: {
-						with: {
-							project: true,
-						},
-					},
+				columns: {
+					applicationId: true,
+					serverId: true,
 				},
 			},
 		},
@@ -130,7 +127,7 @@ export const findPreviewDeploymentsByApplicationId = async (
 };
 
 export const createPreviewDeployment = async (
-	schema: typeof apiCreatePreviewDeployment._type,
+	schema: z.infer<typeof apiCreatePreviewDeployment>,
 ) => {
 	const application = await findApplicationById(schema.applicationId);
 	const appName = `preview-${application.appName}-${generatePassword(6)}`;
@@ -139,13 +136,23 @@ export const createPreviewDeployment = async (
 		where: eq(organization.id, application.environment.project.organizationId),
 	});
 	const generateDomain = await generateWildcardDomain(
-		application.previewWildcard || "*.traefik.me",
+		application.previewWildcard || "*.sslip.io",
 		appName,
 		application.server?.ipAddress || "",
 		org?.ownerId || "",
 	);
 
-	const octokit = authGithub(application?.github as Github);
+	if (!application.githubId) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Github Account not configured correctly",
+		});
+	}
+
+	// `findApplicationById` redacts `githubPrivateKey` from the `github`
+	// relation, so the provider must be refetched to authenticate.
+	const githubProvider = await findGithubById(application.githubId);
+	const octokit = authGithub(githubProvider);
 
 	const runningComment = getIssueComment(
 		application.name,
@@ -235,13 +242,13 @@ const generateWildcardDomain = async (
 	baseDomain: string,
 	appName: string,
 	serverIp: string,
-	userId: string,
+	_userId: string,
 ): Promise<string> => {
 	if (!baseDomain.startsWith("*.")) {
 		throw new Error('The base domain must start with "*."');
 	}
 	const hash = `${appName}`;
-	if (baseDomain.includes("traefik.me")) {
+	if (baseDomain.includes("sslip.io")) {
 		let ip = "";
 
 		if (process.env.NODE_ENV === "development") {

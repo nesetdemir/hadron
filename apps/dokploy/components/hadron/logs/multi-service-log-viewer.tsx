@@ -129,6 +129,7 @@ export function MultiServiceLogViewer({
 						runType: svc.runType || "native",
 					});
 					if (svc.serverId) params.append("serverId", svc.serverId);
+					params.append("serviceId", svc.id);
 
 					const ws = new WebSocket(
 						`${protocol}//${window.location.host}/docker-container-logs?${params.toString()}`,
@@ -292,7 +293,7 @@ export function MultiServiceLogViewer({
 						<button
 							type="button"
 							className={cn(
-								"inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition-colors",
+								"inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium transition-colors",
 								enabledServices.size < services.length
 									? "bg-primary/15 text-primary"
 									: "bg-muted text-muted-foreground hover:text-foreground",
@@ -327,7 +328,7 @@ export function MultiServiceLogViewer({
 						<button
 							type="button"
 							className={cn(
-								"inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition-colors",
+								"inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium transition-colors",
 								enabledLevels.size < 5
 									? "bg-primary/15 text-primary"
 									: "bg-muted text-muted-foreground hover:text-foreground",

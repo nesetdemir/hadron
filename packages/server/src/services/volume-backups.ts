@@ -13,6 +13,11 @@ export const findVolumeBackupById = async (volumeBackupId: string) => {
 		where: eq(volumeBackups.volumeBackupId, volumeBackupId),
 		with: {
 			application: {
+				columns: {
+					applicationId: true,
+					appName: true,
+					serverId: true,
+				},
 				with: {
 					environment: {
 						with: {
@@ -75,7 +80,21 @@ export const findVolumeBackupById = async (volumeBackupId: string) => {
 					},
 				},
 			},
-			destination: true,
+			libsql: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
+			destination: {
+				columns: {
+					accessKey: false,
+					secretAccessKey: false,
+				},
+			},
 		},
 	});
 
@@ -94,7 +113,7 @@ export const createVolumeBackup = async (
 ) => {
 	const newVolumeBackup = await db
 		.insert(volumeBackups)
-		.values(volumeBackup)
+		.values(volumeBackup as typeof volumeBackups.$inferInsert)
 		.returning()
 		.then((e) => e[0]);
 
@@ -113,7 +132,7 @@ export const updateVolumeBackup = async (
 ) => {
 	return await db
 		.update(volumeBackups)
-		.set(volumeBackup)
+		.set(volumeBackup as Partial<typeof volumeBackups.$inferInsert>)
 		.where(eq(volumeBackups.volumeBackupId, volumeBackupId))
 		.returning()
 		.then((e) => e[0]);

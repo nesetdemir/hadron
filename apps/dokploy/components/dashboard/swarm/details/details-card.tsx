@@ -22,12 +22,12 @@ interface Props {
 }
 
 export function NodeCard({ node, serverId }: Props) {
-	const { data, isLoading } = api.swarm.getNodeInfo.useQuery({
+	const { data, isPending } = api.swarm.getNodeInfo.useQuery({
 		nodeId: node.ID,
 		serverId,
 	});
 
-	if (isLoading) {
+	if (isPending) {
 		return (
 			<Card className="w-full bg-background">
 				<CardHeader>
@@ -110,7 +110,7 @@ export function NodeCard({ node, serverId }: Props) {
 						</div>
 					</div>
 
-					<div className="flex justify-end w-full space-x-4">
+					<div className="flex justify-end w-full gap-4">
 						<ShowNodeConfig nodeId={node.ID} serverId={serverId} />
 						<ShowNodeApplications serverId={serverId} />
 					</div>

@@ -1,6 +1,10 @@
+import Head from "next/head";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 import { api } from "@/utils/api";
+import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 import { ImpersonationBar } from "../dashboard/impersonation/impersonation-bar";
-import { HubSpotWidget } from "../shared/HubSpotWidget";
+import { useHubSpotChat } from "../shared/analytics";
 import HadronLayout from "./hadron-layout";
 
 interface Props {
@@ -8,28 +12,47 @@ interface Props {
 	metaName?: string;
 }
 
-export const DashboardLayout = ({ children }: Props) => {
+export const DashboardLayout = ({ children, metaName }: Props) => {
+	const router = useRouter();
 	const { data: haveRootAccess } = api.user.haveRootAccess.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { data: isUserSubscribed } = api.settings.isUserSubscribed.useQuery(
-		undefined,
-		{
-			enabled: isCloud === true,
-			refetchOnWindowFocus: false,
-			refetchOnMount: false,
-			refetchOnReconnect: false,
-		},
-	);
+	const { config: whitelabeling } = useWhitelabeling();
+	const appName = whitelabeling?.appName || "Hadron";
+	const { data: currentPlan } = api.stripe.getCurrentPlan.useQuery(undefined, {
+		enabled: isCloud === true,
+		refetchOnWindowFocus: false,
+		refetchOnMount: false,
+		refetchOnReconnect: false,
+	});
+
+	const isChatEnabled = isCloud === true && currentPlan === "startup";
+	useHubSpotChat(isChatEnabled);
+
+	const { data: onboardingStatus } = api.project.onboardingStatus.useQuery();
+	const shouldRedirectToOnboarding =
+		router.pathname !== "/dashboard/home" &&
+		onboardingStatus?.shouldShowOnboarding === true;
+
+	useEffect(() => {
+		if (shouldRedirectToOnboarding) {
+			router.replace("/dashboard/home");
+		}
+	}, [shouldRedirectToOnboarding, router]);
+
+	if (shouldRedirectToOnboarding) {
+		return null;
+	}
 
 	return (
 		<>
-			<HadronLayout>{children}</HadronLayout>
-			{isCloud === true && isUserSubscribed === true && (
-				<>
-					<HubSpotWidget />
-				</>
+			{metaName && (
+				<Head>
+					<title>
+						{metaName} | {appName}
+					</title>
+				</Head>
 			)}
-
+			<HadronLayout>{children}</HadronLayout>
 			{haveRootAccess === true && <ImpersonationBar />}
 		</>
 	);

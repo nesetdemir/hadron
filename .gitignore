@@ -47,3 +47,6 @@ yarn-error.log*
 # Hadron Swarm state
 .swarm/
 CLAUDE.md
+
+.playwright-*
+.credentials

@@ -1,9 +1,13 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+	createEnvAutocomplete,
+	type ServiceEnvInfo,
+} from "@/components/hadron/env-autocomplete";
+import { useEnvCompletionSource } from "@/components/shared/env-autocomplete";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -17,10 +21,6 @@ import {
 import { Secrets } from "@/components/ui/secrets";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
-import {
-	createEnvAutocomplete,
-	type ServiceEnvInfo,
-} from "@/components/hadron/env-autocomplete";
 
 /** Extract KEY names from a KEY=VALUE env string */
 function parseEnvKeys(envStr: string | null | undefined): string[] {
@@ -47,10 +47,9 @@ interface Props {
 }
 
 export const ShowEnvironment = ({ applicationId }: Props) => {
-	const router = useRouter();
-	const { environmentId } = router.query;
-
-	const { mutateAsync, isLoading } =
+	const { data: permissions } = api.user.getPermissions.useQuery();
+	const canWrite = permissions?.envVars.write ?? false;
+	const { mutateAsync, isPending } =
 		api.application.saveEnvironment.useMutation();
 
 	const { data, refetch } = api.application.one.useQuery(
@@ -62,7 +61,15 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 		},
 	);
 
+	const completionSource = useEnvCompletionSource({
+		projectEnv: data?.environment?.project?.env,
+		environmentEnv: data?.environment?.env,
+		projectId: data?.environment?.projectId,
+		environmentId: data?.environment?.environmentId,
+	});
+
 	// Hadron: Query environment for sibling services (cross-service env autocomplete)
+	const environmentId = data?.environment?.environmentId;
 	const { data: envData } = api.environment.one.useQuery(
 		{ environmentId: environmentId as string },
 		{ enabled: !!environmentId },
@@ -121,14 +128,16 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 	const currentBuildArgs = form.watch("buildArgs");
 	const currentBuildSecrets = form.watch("buildSecrets");
 	const currentCreateEnvFile = form.watch("createEnvFile");
+	const { isDirty } = form.formState;
 	const hasChanges =
 		currentEnv !== (data?.env || "") ||
 		currentBuildArgs !== (data?.buildArgs || "") ||
 		currentBuildSecrets !== (data?.buildSecrets || "") ||
 		currentCreateEnvFile !== (data?.createEnvFile ?? true);
 
+	// Skip reset while editing so background refetches don't wipe edits
 	useEffect(() => {
-		if (data) {
+		if (data && !isDirty) {
 			form.reset({
 				env: data.env || "",
 				buildArgs: data.buildArgs || "",
@@ -136,7 +145,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 				createEnvFile: data.createEnvFile ?? true,
 			});
 		}
-	}, [data, form]);
+	}, [data, isDirty, form]);
 
 	const onSubmit = async (formData: EnvironmentSchema) => {
 		mutateAsync({
@@ -148,6 +157,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 		})
 			.then(async () => {
 				toast.success("Environments Added");
+				form.reset(formData);
 				await refetch();
 			})
 			.catch(() => {
@@ -167,7 +177,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 	// Add keyboard shortcut for Ctrl+S/Cmd+S
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if ((e.ctrlKey || e.metaKey) && e.key === "s" && !isLoading) {
+			if ((e.ctrlKey || e.metaKey) && e.code === "KeyS" && !isPending) {
 				e.preventDefault();
 				form.handleSubmit(onSubmit)();
 			}
@@ -177,7 +187,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [form, onSubmit, isLoading]);
+	}, [form, onSubmit, isPending]);
 
 	return (
 		<Card className="bg-background px-6 pb-6">
@@ -192,7 +202,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 						description={
 							<span>
 								You can add environment variables to your resource.
-								{" "}Use <code className="text-xs bg-muted px-1 py-0.5 rounded">{"${{ServiceName.VAR}}"}</code> to reference other services.
+								{" "}Use <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">{"${{ServiceName.VAR}}"}</code> to reference other services.
 								{hasChanges && (
 									<span className="text-yellow-500 ml-2">
 										(You have unsaved changes)
@@ -201,9 +211,12 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 							</span>
 						}
 						placeholder={["NODE_ENV=production", "PORT=3000", "DB_URL=${{Postgres.DATABASE_URL}}"].join("\n")}
+						completionSource={completionSource}
+						projectId={data?.environment?.projectId}
+						environmentId={data?.environment?.environmentId}
 						additionalExtensions={envAutocompleteExt}
-					enableVisualEditor
-					services={siblings}
+						enableVisualEditor
+						services={siblings}
 					/>
 					{data?.buildType === "dockerfile" && (
 						<Secrets
@@ -225,6 +238,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 								</span>
 							}
 							placeholder="NPM_TOKEN=xyz"
+							completionSource={completionSource}
 						/>
 					)}
 					{data?.buildType === "dockerfile" && (
@@ -247,6 +261,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 								</span>
 							}
 							placeholder="NPM_TOKEN=xyz"
+							completionSource={completionSource}
 						/>
 					)}
 					{data?.buildType === "dockerfile" && (
@@ -254,7 +269,7 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 							control={form.control}
 							name="createEnvFile"
 							render={({ field }) => (
-								<FormItem className="flex flex-row items-center justify-between p-3 border rounded-lg shadow-sm">
+								<FormItem className="flex flex-row items-center justify-between p-3 border rounded-lg shadow-xs">
 									<div className="space-y-0.5">
 										<FormLabel>Create Environment File</FormLabel>
 										<FormDescription>
@@ -268,27 +283,30 @@ export const ShowEnvironment = ({ applicationId }: Props) => {
 										<Switch
 											checked={field.value}
 											onCheckedChange={field.onChange}
+											disabled={!canWrite}
 										/>
 									</FormControl>
 								</FormItem>
 							)}
 						/>
 					)}
-					<div className="flex flex-row justify-end gap-2">
-						{hasChanges && (
-							<Button type="button" variant="outline" onClick={handleCancel}>
-								Cancel
+					{canWrite && (
+						<div className="flex flex-row justify-end gap-2">
+							{hasChanges && (
+								<Button type="button" variant="outline" onClick={handleCancel}>
+									Cancel
+								</Button>
+							)}
+							<Button
+								isLoading={isPending}
+								className="w-fit"
+								type="submit"
+								disabled={!hasChanges}
+							>
+								Save
 							</Button>
-						)}
-						<Button
-							isLoading={isLoading}
-							className="w-fit"
-							type="submit"
-							disabled={!hasChanges}
-						>
-							Save
-						</Button>
-					</div>
+						</div>
+					)}
 				</form>
 			</Form>
 		</Card>

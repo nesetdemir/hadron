@@ -50,6 +50,8 @@ interface HadronLogViewerProps {
 	containerId: string;
 	serverId?: string | null;
 	runType: "swarm" | "native";
+	/** Service the container belongs to; authorizes members without the docker permission. */
+	serviceId?: string;
 }
 
 /**
@@ -67,6 +69,7 @@ export function HadronLogViewer({
 	containerId,
 	serverId,
 	runType,
+	serviceId,
 }: HadronLogViewerProps) {
 	const { data: containerConfig } = api.docker.getConfig.useQuery(
 		{ containerId, serverId: serverId ?? undefined },
@@ -144,6 +147,7 @@ export function HadronLogViewer({
 			runType,
 		});
 		if (serverId) params.append("serverId", serverId);
+		if (serviceId) params.append("serviceId", serviceId);
 
 		const wsUrl = `${protocol}//${window.location.host}/docker-container-logs?${params.toString()}`;
 		const ws = new WebSocket(wsUrl);
@@ -179,7 +183,7 @@ export function HadronLogViewer({
 			if (noDataTimeout) clearTimeout(noDataTimeout);
 			if (ws.readyState === WebSocket.OPEN) ws.close();
 		};
-	}, [containerId, serverId, lines, since, runType]);
+	}, [containerId, serverId, serviceId, lines, since, runType]);
 
 	// Pause/Resume
 	const handlePauseResume = () => {
@@ -487,7 +491,7 @@ function HadronLogLine({
 			const re = new RegExp(`(${pattern})`, "gi");
 			return html.replace(
 				re,
-				(match) => `<mark class="bg-primary/30 text-primary-foreground rounded px-0.5">${match}</mark>`,
+				(match) => `<mark class="bg-primary/30 text-primary-foreground rounded-sm px-0.5">${match}</mark>`,
 			);
 		} catch {
 			return html;
@@ -497,7 +501,7 @@ function HadronLogLine({
 	return (
 		<div
 			className={cn(
-				"flex items-start gap-2 py-[1px] px-2 rounded-sm group",
+				"flex items-start gap-2 py-[1px] px-2 rounded-xs group",
 				bgColors[type] || "hover:bg-muted/50",
 			)}
 		>

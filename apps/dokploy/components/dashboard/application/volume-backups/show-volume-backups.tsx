@@ -54,7 +54,7 @@ export const ShowVolumeBackups = ({
 		},
 	);
 	const utils = api.useUtils();
-	const { mutateAsync: deleteVolumeBackup, isLoading: isDeleting } =
+	const { mutateAsync: deleteVolumeBackup, isPending: isDeleting } =
 		api.volumeBackups.delete.useMutation();
 	const { mutateAsync: runManually } =
 		api.volumeBackups.runManually.useMutation();
@@ -77,7 +77,7 @@ export const ShowVolumeBackups = ({
 	};
 
 	return (
-		<Card className="border px-6 shadow-none bg-transparent h-full min-h-[50vh]">
+		<Card className=" px-6 shadow-none bg-transparent h-full min-h-[50vh]">
 			<CardHeader className="px-0">
 				<div className="flex justify-between items-center flex-wrap gap-2">
 					<div className="flex flex-col gap-2">

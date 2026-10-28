@@ -1,5 +1,6 @@
 import { validateRequest } from "@dokploy/server/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
+import copy from "copy-to-clipboard";
 import { HelpCircle, ServerOff } from "lucide-react";
 import type {
 	GetServerSidePropsContext,
@@ -9,8 +10,9 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { type ReactElement, useState } from "react";
+import { toast } from "sonner";
 import superjson from "superjson";
-import { ShowEnvironment } from "@/components/dashboard/application/environment/show-enviroment";
+import { ShowEnvironment } from "@/components/dashboard/application/environment/show-environment";
 import { ShowDockerLogs } from "@/components/dashboard/application/logs/show";
 import { DeleteService } from "@/components/dashboard/compose/delete-service";
 import { ShowBackups } from "@/components/dashboard/database/backups/show-backups";
@@ -23,7 +25,7 @@ import { UpdatePostgres } from "@/components/dashboard/postgres/update-postgres"
 import { ShowDatabaseAdvancedSettings } from "@/components/dashboard/shared/show-database-advanced-settings";
 import { PostgresqlIcon } from "@/components/icons/data-tools-icons";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
+import { AdvanceBreadcrumb } from "@/components/shared/advance-breadcrumb";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -45,6 +47,7 @@ import { UseKeyboardNav } from "@/hooks/use-keyboard-nav";
 import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
+import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 
 type TabState = "projects" | "monitoring" | "settings" | "backups" | "advanced";
 
@@ -58,11 +61,15 @@ const Postgresql = (
 	const [tab, setSab] = useState<TabState>(activeTab);
 	const { data } = api.postgres.one.useQuery({ postgresId });
 	const { data: auth } = api.user.get.useQuery();
+	const { data: permissions } = api.user.getPermissions.useQuery();
 
 	const { data: isCloud } = api.settings.isCloud.useQuery();
+	const { data: serverIp } = api.settings.getIp.useQuery();
 	const { data: environments } = api.environment.byProjectId.useQuery({
 		projectId: data?.environment?.projectId || "",
 	});
+	const { config: whitelabeling } = useWhitelabeling();
+	const appName = whitelabeling?.appName || "Hadron";
 	const environmentDropdownItems =
 		environments?.map((env) => ({
 			name: env.name,
@@ -72,25 +79,11 @@ const Postgresql = (
 	return (
 		<div className="pb-10">
 			<UseKeyboardNav forPage="postgres" />
-			<BreadcrumbSidebar
-				list={[
-					{ name: "Projects", href: "/dashboard/projects" },
-					{
-						name: data?.environment?.project?.name || "",
-						href: `/dashboard/project/${projectId}/environment/${environmentId}`,
-					},
-					{
-						name: data?.environment?.name || "",
-						dropdownItems: environmentDropdownItems,
-					},
-					{
-						name: data?.name || "",
-					},
-				]}
-			/>
+			<AdvanceBreadcrumb />
 			<Head>
 				<title>
-					Database: {data?.name} - {data?.environment?.project?.name} | Hadron
+					Database: {data?.name} - {data?.environment?.project?.name} |{" "}
+					{appName}
 				</title>
 			</Head>
 			<div className="w-full">
@@ -119,6 +112,14 @@ const Postgresql = (
 							<div className="flex flex-col h-fit w-fit gap-2">
 								<div className="flex flex-row h-fit w-fit gap-2">
 									<Badge
+										className="cursor-pointer"
+										onClick={() => {
+											const ip = data?.server?.ipAddress || serverIp;
+											if (ip) {
+												copy(ip);
+												toast.success("IP Address Copied!");
+											}
+										}}
 										variant={
 											!data?.serverId
 												? "default"
@@ -138,7 +139,7 @@ const Postgresql = (
 													</Label>
 												</TooltipTrigger>
 												<TooltipContent
-													className="z-[999] w-[300px]"
+													className="z-999 w-[300px]"
 													align="start"
 													side="top"
 												>
@@ -154,10 +155,10 @@ const Postgresql = (
 								</div>
 
 								<div className="flex flex-row gap-2 justify-end">
-									<UpdatePostgres postgresId={postgresId} />
-									{(auth?.role === "owner" ||
-										auth?.role === "admin" ||
-										auth?.canDeleteServices) && (
+									{permissions?.service.create && (
+										<UpdatePostgres postgresId={postgresId} />
+									)}
+									{permissions?.service.delete && (
 										<DeleteService id={postgresId} type="postgres" />
 									)}
 								</div>
@@ -199,7 +200,7 @@ const Postgresql = (
 										});
 									}}
 								>
-									<div className="flex flex-row items-center justify-between w-full gap-4 overflow-x-scroll">
+									<div className="flex flex-row items-center justify-between w-full gap-4 overflow-x-auto">
 										<TabsList
 											className={cn(
 												"md:grid md:w-fit max-md:overflow-y-scroll justify-start",
@@ -211,13 +212,24 @@ const Postgresql = (
 											)}
 										>
 											<TabsTrigger value="general">General</TabsTrigger>
-											<TabsTrigger value="environment">Environment</TabsTrigger>
-											<TabsTrigger value="logs">Logs</TabsTrigger>
-											{((data?.serverId && isCloud) || !data?.server) && (
-												<TabsTrigger value="monitoring">Monitoring</TabsTrigger>
+											{permissions?.envVars.read && (
+												<TabsTrigger value="environment">
+													Environment
+												</TabsTrigger>
 											)}
+											{permissions?.logs.read && (
+												<TabsTrigger value="logs">Logs</TabsTrigger>
+											)}
+											{permissions?.monitoring.read &&
+												((data?.serverId && isCloud) || !data?.server) && (
+													<TabsTrigger value="monitoring">
+														Monitoring
+													</TabsTrigger>
+												)}
 											<TabsTrigger value="backups">Backups</TabsTrigger>
-											<TabsTrigger value="advanced">Advanced</TabsTrigger>
+											{permissions?.service.create && (
+												<TabsTrigger value="advanced">Advanced</TabsTrigger>
+											)}
 										</TabsList>
 									</div>
 
@@ -232,44 +244,51 @@ const Postgresql = (
 											/>
 										</div>
 									</TabsContent>
-									<TabsContent value="environment">
-										<div className="flex flex-col gap-4 pt-2.5">
-											<ShowEnvironment id={postgresId} type="postgres" />
-										</div>
-									</TabsContent>
-									<TabsContent value="monitoring">
-										<div className="pt-2.5">
-											<div className="flex flex-col gap-4 border rounded-lg p-6">
-												{data?.serverId && isCloud ? (
-													<ContainerPaidMonitoring
-														appName={data?.appName || ""}
-														baseUrl={`${
-															data?.serverId
-																? `http://${data?.server?.ipAddress}:${data?.server?.metricsConfig?.server?.port}`
-																: "http://localhost:4500"
-														}`}
-														token={
-															data?.server?.metricsConfig?.server?.token || ""
-														}
-													/>
-												) : (
-													<>
-														<ContainerFreeMonitoring
-															appName={data?.appName || ""}
-														/>
-													</>
-												)}
+									{permissions?.envVars.read && (
+										<TabsContent value="environment">
+											<div className="flex flex-col gap-4 pt-2.5">
+												<ShowEnvironment id={postgresId} type="postgres" />
 											</div>
-										</div>
-									</TabsContent>
-									<TabsContent value="logs">
-										<div className="flex flex-col gap-4  pt-2.5">
-											<ShowDockerLogs
-												serverId={data?.serverId || ""}
-												appName={data?.appName || ""}
-											/>
-										</div>
-									</TabsContent>
+										</TabsContent>
+									)}
+									{permissions?.monitoring.read && (
+										<TabsContent value="monitoring">
+											<div className="pt-2.5">
+												<div className="flex flex-col gap-4 border rounded-lg p-6">
+													{data?.serverId && isCloud ? (
+														<ContainerPaidMonitoring
+															appName={data?.appName || ""}
+															baseUrl={`${
+																data?.serverId
+																	? `http://${data?.server?.ipAddress}:${data?.server?.metricsConfig?.server?.port}`
+																	: "http://localhost:4500"
+															}`}
+															token={
+																data?.server?.metricsConfig?.server?.token || ""
+															}
+														/>
+													) : (
+														<>
+															<ContainerFreeMonitoring
+																appName={data?.appName || ""}
+															/>
+														</>
+													)}
+												</div>
+											</div>
+										</TabsContent>
+									)}
+									{permissions?.logs.read && (
+										<TabsContent value="logs">
+											<div className="flex flex-col gap-4  pt-2.5">
+												<ShowDockerLogs
+													serverId={data?.serverId || ""}
+													appName={data?.appName || ""}
+													serviceId={data?.postgresId}
+												/>
+											</div>
+										</TabsContent>
+									)}
 									<TabsContent value="backups">
 										<div className="flex flex-col gap-4 pt-2.5">
 											<ShowBackups
@@ -279,14 +298,16 @@ const Postgresql = (
 											/>
 										</div>
 									</TabsContent>
-									<TabsContent value="advanced">
-										<div className="flex flex-col gap-4 pt-2.5">
-											<ShowDatabaseAdvancedSettings
-												id={postgresId}
-												type="postgres"
-											/>
-										</div>
-									</TabsContent>
+									{permissions?.service.create && (
+										<TabsContent value="advanced">
+											<div className="flex flex-col gap-4 pt-2.5">
+												<ShowDatabaseAdvancedSettings
+													id={postgresId}
+													type="postgres"
+												/>
+											</div>
+										</TabsContent>
+									)}
 								</Tabs>
 							)}
 						</CardContent>
@@ -315,7 +336,7 @@ export async function getServerSideProps(
 	if (!user) {
 		return {
 			redirect: {
-				permanent: true,
+				permanent: false,
 				destination: "/",
 			},
 		};
@@ -339,6 +360,7 @@ export async function getServerSideProps(
 				postgresId: params?.postgresId,
 			});
 			await helpers.settings.isCloud.prefetch();
+
 			return {
 				props: {
 					trpcState: helpers.dehydrate(),
@@ -350,7 +372,7 @@ export async function getServerSideProps(
 			return {
 				redirect: {
 					permanent: false,
-					destination: "/dashboard/projects",
+					destination: "/dashboard/home",
 				},
 			};
 		}

@@ -77,7 +77,7 @@ export function ProjectSettingsOverlay({
 	if (!open) return null;
 
 	return (
-		<div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
+		<div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xs">
 			{/* Header */}
 			<div className="flex items-center justify-between border-b px-6 h-14">
 				<h1 className="text-lg font-semibold">Project Settings</h1>
@@ -136,7 +136,7 @@ export function ProjectSettingsOverlay({
 function GeneralSection({ projectId }: { projectId: string }) {
 	const utils = api.useUtils();
 	const { data } = api.project.one.useQuery({ projectId });
-	const { mutateAsync, isLoading } = api.project.update.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.project.update.useMutation();
 
 	const form = useForm<z.infer<typeof updateProjectSchema>>({
 		defaultValues: {
@@ -259,7 +259,7 @@ function EnvironmentsSection({ projectId }: { projectId: string }) {
 							<Globe className="size-4 text-muted-foreground" />
 							<span className="text-sm font-medium">{env.name}</span>
 							{env.isDefault && (
-								<span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+								<span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm font-medium">
 									Default
 								</span>
 							)}
@@ -280,7 +280,7 @@ function EnvironmentsSection({ projectId }: { projectId: string }) {
 function SharedVariablesSection({ projectId }: { projectId: string }) {
 	const utils = api.useUtils();
 	const { data } = api.project.one.useQuery({ projectId });
-	const { mutateAsync, isLoading, isError, error } =
+	const { mutateAsync, isPending: isLoading, isError, error } =
 		api.project.update.useMutation();
 
 	const form = useForm<z.infer<typeof updateEnvSchema>>({
@@ -361,7 +361,7 @@ function DangerSection({
 	onClose: () => void;
 }) {
 	const utils = api.useUtils();
-	const { mutateAsync, isLoading } = api.project.remove.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.project.remove.useMutation();
 
 	const handleDelete = async () => {
 		try {

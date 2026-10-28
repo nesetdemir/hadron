@@ -23,7 +23,6 @@ import {
 	CommandList,
 	CommandSeparator,
 } from "@/components/ui/command";
-import { authClient } from "@/lib/auth-client";
 import { api } from "@/utils/api";
 import { StatusTooltip } from "../shared/status-tooltip";
 
@@ -56,7 +55,7 @@ export const SearchCommand = () => {
 	const router = useRouter();
 	const [open, setOpen] = React.useState(false);
 	const [search, setSearch] = React.useState("");
-	const { data: session } = authClient.useSession();
+	const { data: session } = api.user.session.useQuery();
 	const { data } = api.project.all.useQuery(undefined, {
 		enabled: !!session,
 	});
@@ -64,7 +63,7 @@ export const SearchCommand = () => {
 
 	React.useEffect(() => {
 		const down = (e: KeyboardEvent) => {
-			if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
+			if (e.code === "KeyJ" && (e.metaKey || e.ctrlKey)) {
 				e.preventDefault();
 				setOpen((open) => !open);
 			}
@@ -151,7 +150,7 @@ export const SearchCommand = () => {
 										{application.type === "compose" && (
 											<CircuitBoard className="h-6 w-6 mr-2" />
 										)}
-										<span className="flex-grow">
+										<span className="grow">
 											{project.name} / {application.environmentName} /{" "}
 											{application.name}{" "}
 											<div style={{ display: "none" }}>{application.id}</div>
@@ -168,11 +167,19 @@ export const SearchCommand = () => {
 					<CommandGroup heading={"Application"} hidden={true}>
 						<CommandItem
 							onSelect={() => {
-								router.push("/dashboard/projects");
+								router.push("/dashboard/home");
 								setOpen(false);
 							}}
 						>
 							Projects
+						</CommandItem>
+						<CommandItem
+							onSelect={() => {
+								router.push("/dashboard/overview?tab=deployments");
+								setOpen(false);
+							}}
+						>
+							Deployments
 						</CommandItem>
 						{!isCloud && (
 							<>
