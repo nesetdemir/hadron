@@ -1,3 +1,4 @@
+import type { CompletionSource } from "@codemirror/autocomplete";
 import {
 	type CSSProperties,
 	useCallback,
@@ -72,6 +73,9 @@ export interface RailwayEnvEditorProps {
 	disabled?: boolean;
 	services?: ServiceEnvInfo[];
 	additionalExtensions?: any[];
+	/** Used in raw mode only when no `additionalExtensions` are given, since two
+	 * `autocompletion({ override })` extensions conflict in CodeMirror. */
+	completionSource?: CompletionSource;
 	placeholder?: string;
 	style?: CSSProperties;
 }
@@ -598,6 +602,7 @@ export function RailwayEnvEditor({
 	disabled,
 	services = [],
 	additionalExtensions,
+	completionSource,
 	placeholder,
 	style,
 }: RailwayEnvEditorProps) {
@@ -773,6 +778,7 @@ export function RailwayEnvEditor({
 					placeholder={placeholder}
 					className="h-96 font-mono"
 					additionalExtensions={additionalExtensions}
+					completionSource={additionalExtensions ? undefined : completionSource}
 					value={value}
 					onChange={onChange}
 				/>

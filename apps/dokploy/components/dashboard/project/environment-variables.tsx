@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Terminal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { CodeEditor } from "@/components/shared/code-editor";
+import { useEnvCompletionSource } from "@/components/shared/env-autocomplete";
+import { VaultImportDialog } from "@/components/shared/vault-import-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -39,9 +41,12 @@ interface Props {
 }
 
 export const EnvironmentVariables = ({ environmentId, children }: Props) => {
+	const { data: permissions } = api.user.getPermissions.useQuery();
+	const canRead = permissions?.environmentEnvVars.read ?? false;
+	const canWrite = permissions?.environmentEnvVars.write ?? false;
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending } =
 		api.environment.update.useMutation();
 	const { data } = api.environment.one.useQuery(
 		{
@@ -52,6 +57,11 @@ export const EnvironmentVariables = ({ environmentId, children }: Props) => {
 		},
 	);
 
+	const completionSource = useEnvCompletionSource({
+		includeShared: false,
+		projectId: data?.projectId,
+		environmentId,
+	});
 	const form = useForm<UpdateEnvironment>({
 		defaultValues: {
 			env: data?.env ?? "",
@@ -85,7 +95,12 @@ export const EnvironmentVariables = ({ environmentId, children }: Props) => {
 	// Add keyboard shortcut for Ctrl+S/Cmd+S
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if ((e.ctrlKey || e.metaKey) && e.key === "s" && !isLoading && isOpen) {
+			if (
+				(e.ctrlKey || e.metaKey) &&
+				e.code === "KeyS" &&
+				!isPending &&
+				isOpen
+			) {
 				e.preventDefault();
 				form.handleSubmit(onSubmit)();
 			}
@@ -95,7 +110,11 @@ export const EnvironmentVariables = ({ environmentId, children }: Props) => {
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [form, onSubmit, isLoading, isOpen]);
+	}, [form, onSubmit, isPending, isOpen]);
+
+	if (!canRead) {
+		return null;
+	}
 
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -122,7 +141,9 @@ export const EnvironmentVariables = ({ environmentId, children }: Props) => {
 				<AlertBlock type="info">
 					Use this syntax to reference environment-level variables in your
 					service environments:{" "}
-					<code>API_URL=${"{{environment.API_URL}}"}</code>
+					<code>API_URL=${"{{environment.API_URL}}"}</code>. You can also
+					reference secrets from a configured vault provider:{" "}
+					<code>DB_URL=${"{{vault.<provider>.<secret>}}"}</code>
 				</AlertBlock>
 				<div className="grid gap-4">
 					<div className="grid items-center gap-4">
@@ -136,12 +157,24 @@ export const EnvironmentVariables = ({ environmentId, children }: Props) => {
 									name="env"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Environment variables</FormLabel>
+											<div className="flex items-center justify-between">
+												<FormLabel>Environment variables</FormLabel>
+												<VaultImportDialog
+													projectId={data?.projectId}
+													environmentId={environmentId}
+													currentEnv={field.value ?? ""}
+													onImport={(next) =>
+														form.setValue("env", next, { shouldDirty: true })
+													}
+												/>
+											</div>
 											<FormControl>
 												<CodeEditor
+													completionSource={completionSource}
 													lineWrapping
 													language="properties"
-													wrapperClassName="h-[35rem] font-mono"
+													readOnly={!canWrite}
+													wrapperClassName="h-140 font-mono"
 													placeholder={`NODE_ENV=development
 DATABASE_URL=postgresql://localhost:5432/mydb
 API_KEY=your-api-key-here
@@ -157,11 +190,13 @@ API_KEY=your-api-key-here
 										</FormItem>
 									)}
 								/>
-								<DialogFooter>
-									<Button isLoading={isLoading} type="submit">
-										Update
-									</Button>
-								</DialogFooter>
+								{canWrite && (
+									<DialogFooter>
+										<Button isLoading={isPending} type="submit">
+											Update
+										</Button>
+									</DialogFooter>
+								)}
 							</form>
 						</Form>
 					</div>

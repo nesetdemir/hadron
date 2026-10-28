@@ -29,6 +29,7 @@ import { cloneGitlabRepository } from "@dokploy/server/utils/providers/gitlab";
 import { createTraefikConfig } from "@dokploy/server/utils/traefik/application";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 import { encodeBase64 } from "../utils/docker/utils";
 import { getDokployUrl } from "./admin";
 import {
@@ -53,7 +54,7 @@ import { validUniqueServerAppName } from "./project";
 export type Application = typeof applications.$inferSelect;
 
 export const createApplication = async (
-	input: typeof apiCreateApplication._type,
+	input: z.infer<typeof apiCreateApplication>,
 ) => {
 	const appName = buildAppName("app", input.appName);
 
@@ -94,26 +95,36 @@ export const findApplicationById = async (applicationId: string) => {
 	const application = await db.query.applications.findFirst({
 		where: eq(applications.applicationId, applicationId),
 		with: {
-			environment: {
-				with: {
-					project: true,
-				},
-			},
+			environment: { with: { project: true } },
 			domains: true,
 			deployments: true,
 			mounts: true,
 			redirects: true,
 			security: true,
 			ports: true,
-			registry: true,
-			gitlab: true,
-			github: true,
-			bitbucket: true,
-			gitea: true,
+			gitlab: {
+				columns: { secret: false, accessToken: false, refreshToken: false },
+			},
+			github: {
+				columns: {
+					githubClientSecret: false,
+					githubPrivateKey: false,
+					githubWebhookSecret: false,
+				},
+			},
+			bitbucket: { columns: { appPassword: false, apiToken: false } },
+			gitea: {
+				columns: {
+					clientSecret: false,
+					accessToken: false,
+					refreshToken: false,
+				},
+			},
 			server: true,
 			previewDeployments: true,
-			buildRegistry: true,
-			rollbackRegistry: true,
+			registry: { columns: { password: false } },
+			buildRegistry: { columns: { password: false } },
+			rollbackRegistry: { columns: { password: false } },
 		},
 	});
 	if (!application) {

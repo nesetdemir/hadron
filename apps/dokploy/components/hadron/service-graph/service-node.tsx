@@ -9,6 +9,7 @@ import {
 	FolderClosed,
 } from "lucide-react";
 import {
+	LibsqlIcon,
 	MariadbIcon,
 	MongodbIcon,
 	MysqlIcon,
@@ -26,6 +27,7 @@ export type ServiceNodeData = {
 		| "mariadb"
 		| "mongo"
 		| "redis"
+		| "libsql"
 		| "compose";
 	status?: "idle" | "running" | "done" | "error";
 	description?: string | null;
@@ -42,6 +44,7 @@ const serviceIcons: Record<string, React.FC<{ className?: string }>> = {
 	mariadb: MariadbIcon,
 	mongo: MongodbIcon,
 	redis: RedisIcon,
+	libsql: LibsqlIcon,
 	compose: CircuitBoard,
 };
 
@@ -52,6 +55,7 @@ const serviceIconColors: Record<string, string> = {
 	mariadb: "text-amber-700",
 	mongo: "text-green-600",
 	redis: "text-red-500",
+	libsql: "text-teal-500",
 	compose: "text-violet-500",
 };
 
@@ -67,7 +71,7 @@ export function ServiceNode({ data, selected }: NodeProps) {
 	const Icon = serviceIcons[nodeData.serviceType] || Database;
 	const status = statusConfig[nodeData.status || "idle"] ?? statusConfig.idle!;
 	const iconColor = serviceIconColors[nodeData.serviceType] || "text-muted-foreground";
-	const isDatabase = ["postgres", "mysql", "mariadb", "mongo", "redis"].includes(nodeData.serviceType);
+	const isDatabase = ["postgres", "mysql", "mariadb", "mongo", "redis", "libsql"].includes(nodeData.serviceType);
 
 	return (
 		<div

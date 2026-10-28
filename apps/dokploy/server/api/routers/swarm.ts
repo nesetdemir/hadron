@@ -1,5 +1,6 @@
 import {
 	findServerById,
+	getAllContainerStats,
 	getApplicationInfo,
 	getNodeApplications,
 	getNodeInfo,
@@ -7,11 +8,11 @@ import {
 } from "@dokploy/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, withPermission } from "../trpc";
 import { containerIdRegex } from "./docker";
 
 export const swarmRouter = createTRPCRouter({
-	getNodes: protectedProcedure
+	getNodes: withPermission("docker", "read")
 		.input(
 			z.object({
 				serverId: z.string().optional(),
@@ -21,23 +22,29 @@ export const swarmRouter = createTRPCRouter({
 			if (input.serverId) {
 				const server = await findServerById(input.serverId);
 				if (server.organizationId !== ctx.session?.activeOrganizationId) {
-					throw new TRPCError({ code: "UNAUTHORIZED" });
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this server",
+					});
 				}
 			}
 			return await getSwarmNodes(input.serverId);
 		}),
-	getNodeInfo: protectedProcedure
+	getNodeInfo: withPermission("docker", "read")
 		.input(z.object({ nodeId: z.string(), serverId: z.string().optional() }))
 		.query(async ({ input, ctx }) => {
 			if (input.serverId) {
 				const server = await findServerById(input.serverId);
 				if (server.organizationId !== ctx.session?.activeOrganizationId) {
-					throw new TRPCError({ code: "UNAUTHORIZED" });
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this server",
+					});
 				}
 			}
 			return await getNodeInfo(input.nodeId, input.serverId);
 		}),
-	getNodeApps: protectedProcedure
+	getNodeApps: withPermission("docker", "read")
 		.input(
 			z.object({
 				serverId: z.string().optional(),
@@ -47,12 +54,15 @@ export const swarmRouter = createTRPCRouter({
 			if (input.serverId) {
 				const server = await findServerById(input.serverId);
 				if (server.organizationId !== ctx.session?.activeOrganizationId) {
-					throw new TRPCError({ code: "UNAUTHORIZED" });
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this server",
+					});
 				}
 			}
 			return getNodeApplications(input.serverId);
 		}),
-	getAppInfos: protectedProcedure
+	getAppInfos: withPermission("docker", "read")
 		.meta({
 			openapi: {
 				path: "/drop-deployment",
@@ -75,9 +85,27 @@ export const swarmRouter = createTRPCRouter({
 			if (input.serverId) {
 				const server = await findServerById(input.serverId);
 				if (server.organizationId !== ctx.session?.activeOrganizationId) {
-					throw new TRPCError({ code: "UNAUTHORIZED" });
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this server",
+					});
 				}
 			}
 			return await getApplicationInfo(input.appName, input.serverId);
+		}),
+	getContainerStats: withPermission("docker", "read")
+		.input(
+			z.object({
+				serverId: z.string().optional(),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			if (input.serverId) {
+				const server = await findServerById(input.serverId);
+				if (server.organizationId !== ctx.session?.activeOrganizationId) {
+					throw new TRPCError({ code: "UNAUTHORIZED" });
+				}
+			}
+			return await getAllContainerStats(input.serverId);
 		}),
 });

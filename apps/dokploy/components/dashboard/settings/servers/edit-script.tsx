@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { FileTerminal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -49,7 +49,7 @@ export const EditScript = ({ serverId }: Props) => {
 		},
 	);
 
-	const { mutateAsync, isLoading } = api.server.update.useMutation();
+	const { mutateAsync, isPending } = api.server.update.useMutation();
 
 	const { data: defaultCommand } = api.server.getDefaultCommand.useQuery(
 		{
@@ -125,7 +125,7 @@ export const EditScript = ({ serverId }: Props) => {
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Command</FormLabel>
-										<FormControl className="max-h-[75vh] max-w-[60rem] overflow-y-scroll overflow-x-hidden">
+										<FormControl className="max-h-[75vh] max-w-240 overflow-y-scroll overflow-x-hidden">
 											<CodeEditor
 												language="shell"
 												wrapperClassName="font-mono"
@@ -155,7 +155,7 @@ echo "Hello world"
 						Reset
 					</Button>
 					<Button
-						isLoading={isLoading}
+						isLoading={isPending}
 						form="hook-form-delete-application"
 						type="submit"
 					>

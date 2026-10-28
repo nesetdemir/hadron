@@ -57,7 +57,7 @@ export function ServiceEdge({
 					className="pointer-events-none"
 				>
 					<div className="flex items-center justify-center h-full">
-						<span className="text-[11px] bg-card border rounded-md px-2 py-0.5 text-muted-foreground font-mono truncate max-w-[120px] shadow-sm">
+						<span className="text-[11px] bg-card border rounded-md px-2 py-0.5 text-muted-foreground font-mono truncate max-w-[120px] shadow-xs">
 							{edgeData.envVar}
 						</span>
 					</div>

@@ -15,6 +15,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TimeBadge } from "@/components/ui/time-badge";
+import { api } from "@/utils/api";
 
 interface BreadcrumbEntry {
 	name: string;
@@ -30,6 +32,8 @@ interface Props {
 }
 
 export const BreadcrumbSidebar = ({ list }: Props) => {
+	const { data: isCloud } = api.settings.isCloud.useQuery();
+
 	return (
 		<header className="flex h-12 shrink-0 items-center gap-2 px-4">
 			<div className="flex items-center justify-between w-full">
@@ -37,11 +41,11 @@ export const BreadcrumbSidebar = ({ list }: Props) => {
 					<Breadcrumb>
 						<BreadcrumbList>
 							{list.map((item, index) => (
-								<Fragment key={item.name}>
+								<Fragment key={`${item.name}-${index}`}>
 									<BreadcrumbItem className="block">
 										{item.dropdownItems && item.dropdownItems.length > 0 ? (
 											<DropdownMenu>
-												<DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground transition-colors outline-none">
+												<DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground transition-colors outline-hidden">
 													{item.name}
 													<ChevronDown className="h-4 w-4 opacity-50" />
 												</DropdownMenuTrigger>
@@ -71,6 +75,7 @@ export const BreadcrumbSidebar = ({ list }: Props) => {
 						</BreadcrumbList>
 					</Breadcrumb>
 				</div>
+				{!isCloud && <TimeBadge />}
 			</div>
 		</header>
 	);

@@ -25,6 +25,7 @@ const baseSettings: WebServerSettings = {
 	letsEncryptEmail: null,
 	sshPrivateKey: null,
 	enableDockerCleanup: false,
+	buildsConcurrency: 1,
 	logCleanupCron: null,
 	metricsConfig: {
 		containers: {
@@ -48,9 +49,25 @@ const baseSettings: WebServerSettings = {
 			urlCallback: "",
 		},
 	},
+	whitelabelingConfig: {
+		appName: null,
+		appDescription: null,
+		logoUrl: null,
+		faviconUrl: null,
+		customCss: null,
+		loginLogoUrl: null,
+		supportUrl: null,
+		docsUrl: null,
+		errorPageTitle: null,
+		errorPageDescription: null,
+		ogImageUrl: null,
+		footerText: null,
+	},
 	cleanupCacheApplications: false,
 	cleanupCacheOnCompose: false,
 	cleanupCacheOnPreviews: false,
+	remoteServersOnly: false,
+	enforceSSO: false,
 	createdAt: null,
 	updatedAt: new Date(),
 };

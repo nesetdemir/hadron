@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { PenBoxIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -53,7 +53,7 @@ export const EditGithubProvider = ({ githubId }: Props) => {
 	const utils = api.useUtils();
 	const [isOpen, setIsOpen] = useState(false);
 	const { mutateAsync, error, isError } = api.github.update.useMutation();
-	const { mutateAsync: testConnection, isLoading } =
+	const { mutateAsync: testConnection, isPending } =
 		api.github.testConnection.useMutation();
 	const form = useForm<Schema>({
 		defaultValues: {
@@ -147,11 +147,20 @@ export const EditGithubProvider = ({ githubId }: Props) => {
 									)}
 								/>
 
+								<div className="flex flex-col gap-2">
+									<span className="text-sm font-medium">GitHub URL</span>
+									<Input value={github?.githubUrl ?? ""} readOnly />
+									<span className="text-muted-foreground text-xs">
+										Set when the app was created and not editable, the app
+										credentials belong to this instance.
+									</span>
+								</div>
+
 								<div className="flex w-full justify-between gap-4 mt-4">
 									<Button
 										type="button"
 										variant={"secondary"}
-										isLoading={isLoading}
+										isLoading={isPending}
 										onClick={async () => {
 											await testConnection({
 												githubId,

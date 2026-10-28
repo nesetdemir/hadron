@@ -17,7 +17,7 @@ interface Props {
 }
 
 export const ShowNodeApplications = ({ serverId }: Props) => {
-	const { data: NodeApps, isLoading: NodeAppsLoading } =
+	const { data: NodeApps, isPending: NodeAppsLoading } =
 		api.swarm.getNodeApps.useQuery({ serverId });
 
 	let applicationList: string[] = [];
@@ -26,14 +26,14 @@ export const ShowNodeApplications = ({ serverId }: Props) => {
 		applicationList = NodeApps.map((app) => app.Name);
 	}
 
-	const { data: NodeAppDetails, isLoading: NodeAppDetailsLoading } =
+	const { data: NodeAppDetails, isPending: NodeAppDetailsLoading } =
 		api.swarm.getAppInfos.useQuery({ appName: applicationList, serverId });
 
 	if (NodeAppsLoading || NodeAppDetailsLoading) {
 		return (
 			<Dialog>
 				<DialogTrigger asChild>
-					<Button variant="outline" size="sm" className="w-full">
+					<Button variant="outline" size="sm">
 						<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 					</Button>
 				</DialogTrigger>
@@ -82,7 +82,7 @@ export const ShowNodeApplications = ({ serverId }: Props) => {
 	return (
 		<Dialog>
 			<DialogTrigger asChild>
-				<Button variant="outline" size="sm" className="w-full">
+				<Button variant="outline" size="sm">
 					<Layers className="h-4 w-4 mr-2" />
 					Services
 				</Button>

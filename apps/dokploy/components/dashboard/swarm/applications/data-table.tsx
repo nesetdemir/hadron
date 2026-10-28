@@ -1,6 +1,5 @@
 "use client";
 
-import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 import {
 	type ColumnDef,
 	type ColumnFiltersState,
@@ -20,6 +19,7 @@ import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
@@ -153,7 +153,7 @@ export function DataTable<TData, TValue>({
 									className="h-24 text-center"
 								>
 									No results.
-									{/* {isLoading ? (
+									{/* {isPending ? (
                     <div className="w-full flex-col gap-2 flex items-center justify-center h-[55vh]">
                       <span className="text-muted-foreground text-lg font-medium">
                         Loading...

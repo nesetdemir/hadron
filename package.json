@@ -23,16 +23,16 @@
 		"generate:openapi": "pnpm --filter=dokploy run generate:openapi"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.1.1",
+		"@biomejs/biome": "2.5.7",
 		"@types/node": "^24.4.0",
 		"dotenv": "16.4.5",
 		"esbuild": "0.20.2",
 		"lint-staged": "^15.5.2",
-		"tsx": "4.16.2"
+		"tsx": "4.22.4"
 	},
 	"packageManager": "pnpm@10.22.0",
 	"engines": {
-		"node": "^24.4.0",
+		"node": "^24.22.1",
 		"pnpm": ">=9.12.0"
 	},
 	"lint-staged": {
@@ -46,11 +46,20 @@
 	},
 	"pnpm": {
 		"overrides": {
-			"esbuild": "0.20.2"
+			"esbuild": "0.20.2",
+			"better-call": "1.3.7",
+			"@better-fetch/fetch": "1.3.1"
 		},
-		"ignoredBuiltDependencies": [
-			"@prisma/client"
-		],
+		"peerDependencyRules": {
+			"ignoreMissing": [
+				"prisma",
+				"@prisma/client",
+				"@prisma/engines",
+				"@electric-sql/pglite",
+				"typescript",
+				"drizzle-kit"
+			]
+		},
 		"onlyBuiltDependencies": [
 			"@scarf/scarf",
 			"@tree-sitter-grammars/tree-sitter-yaml",

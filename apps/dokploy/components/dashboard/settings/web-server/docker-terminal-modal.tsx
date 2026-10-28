@@ -40,6 +40,7 @@ interface Props {
 	children?: React.ReactNode;
 	serverId?: string;
 	appType?: "stack" | "docker-compose";
+	serviceId?: string;
 }
 
 export const DockerTerminalModal = ({
@@ -47,8 +48,9 @@ export const DockerTerminalModal = ({
 	appName,
 	serverId,
 	appType,
+	serviceId,
 }: Props) => {
-	const { data, isLoading } = api.docker.getContainersByAppNameMatch.useQuery(
+	const { data, isPending } = api.docker.getContainersByAppNameMatch.useQuery(
 		{
 			appName,
 			appType,
@@ -101,7 +103,7 @@ export const DockerTerminalModal = ({
 				</DialogHeader>
 				<Select onValueChange={setContainerId} value={containerId}>
 					<SelectTrigger>
-						{isLoading ? (
+						{isPending ? (
 							<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground">
 								<span>Loading...</span>
 								<Loader2 className="animate-spin size-4" />
@@ -131,6 +133,7 @@ export const DockerTerminalModal = ({
 					serverId={serverId || ""}
 					id="terminal"
 					containerId={containerId || "select-a-container"}
+					serviceId={serviceId}
 				/>
 				<Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
 					<DialogContent onEscapeKeyDown={(event) => event.preventDefault()}>

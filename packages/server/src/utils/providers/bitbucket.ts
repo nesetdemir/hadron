@@ -10,6 +10,8 @@ import {
 } from "@dokploy/server/services/bitbucket";
 import type { InferResultType } from "@dokploy/server/types/with";
 import { TRPCError } from "@trpc/server";
+import { quote } from "shell-quote";
+import type { z } from "zod";
 
 export type ApplicationWithBitbucket = InferResultType<
 	"applications",
@@ -123,8 +125,8 @@ export const cloneBitbucketRepository = async ({
 	const repoToUse = entity.bitbucketRepositorySlug || bitbucketRepository;
 	const repoclone = `bitbucket.org/${bitbucketOwner}/${repoToUse}.git`;
 	const cloneUrl = getBitbucketCloneUrl(bitbucket, repoclone);
-	command += `echo "Cloning Repo ${repoclone} to ${outputPath}: ✅";`;
-	command += `git clone --branch ${bitbucketBranch} --depth 1 ${enableSubmodules ? "--recurse-submodules" : ""} ${cloneUrl} ${outputPath} --progress;`;
+	command += `echo ${quote([`Cloning Repo ${repoclone} to ${outputPath}: ✅`])};`;
+	command += `git clone --branch ${quote([String(bitbucketBranch ?? "")])} --depth 1 ${enableSubmodules ? "--recurse-submodules" : ""} ${quote([String(cloneUrl ?? "")])} ${quote([String(outputPath ?? "")])} --progress;`;
 	return command;
 };
 
@@ -179,7 +181,7 @@ export const getBitbucketRepositories = async (bitbucketId?: string) => {
 };
 
 export const getBitbucketBranches = async (
-	input: typeof apiFindBitbucketBranches._type,
+	input: z.infer<typeof apiFindBitbucketBranches>,
 ) => {
 	if (!input.bitbucketId) {
 		return [];
@@ -234,7 +236,7 @@ export const getBitbucketBranches = async (
 };
 
 export const testBitbucketConnection = async (
-	input: typeof apiBitbucketTestConnection._type,
+	input: z.infer<typeof apiBitbucketTestConnection>,
 ) => {
 	const bitbucketProvider = await findBitbucketById(input.bitbucketId);
 

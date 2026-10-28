@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export function SignInWithGoogle() {
 	const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +13,9 @@ export function SignInWithGoogle() {
 		try {
 			const { error } = await authClient.signIn.social({
 				provider: "google",
+				callbackURL: "/dashboard/home",
+				newUserCallbackURL: "/dashboard/home?signup=google",
+				errorCallbackURL: "/",
 			});
 			if (error) {
 				toast.error(error.message);

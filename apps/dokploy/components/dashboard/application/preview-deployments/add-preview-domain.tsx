@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Dices } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -75,11 +75,11 @@ export const AddPreviewDomain = ({
 		},
 	);
 
-	const { mutateAsync, isError, error, isLoading } = domainId
+	const { mutateAsync, isError, error, isPending } = domainId
 		? api.domain.update.useMutation()
 		: api.domain.create.useMutation();
 
-	const { mutateAsync: generateDomain, isLoading: isLoadingGenerate } =
+	const { mutateAsync: generateDomain, isPending: isLoadingGenerate } =
 		api.domain.generateDomain.useMutation();
 
 	const form = useForm<Domain>({
@@ -87,7 +87,7 @@ export const AddPreviewDomain = ({
 	});
 
 	const host = form.watch("host");
-	const isTraefikMeDomain = host?.includes("traefik.me") || false;
+	const isTraefikMeDomain = host?.includes("sslip.io") || false;
 
 	useEffect(() => {
 		if (data) {
@@ -103,7 +103,7 @@ export const AddPreviewDomain = ({
 		if (!domainId) {
 			form.reset({});
 		}
-	}, [form, form.reset, data, isLoading]);
+	}, [form, form.reset, data, isPending]);
 
 	const dictionary = {
 		success: domainId ? "Domain Updated" : "Domain Created",
@@ -162,7 +162,7 @@ export const AddPreviewDomain = ({
 										<FormItem>
 											{isTraefikMeDomain && (
 												<AlertBlock type="info">
-													<strong>Note:</strong> traefik.me is a public HTTP
+													<strong>Note:</strong> sslip.io is a public HTTP
 													service and does not support SSL/HTTPS. HTTPS and
 													certificate options will not have any effect.
 												</AlertBlock>
@@ -200,9 +200,9 @@ export const AddPreviewDomain = ({
 														<TooltipContent
 															side="left"
 															sideOffset={5}
-															className="max-w-[10rem]"
+															className="max-w-40"
 														>
-															<p>Generate traefik.me domain</p>
+															<p>Generate sslip.io domain</p>
 														</TooltipContent>
 													</Tooltip>
 												</TooltipProvider>
@@ -249,7 +249,7 @@ export const AddPreviewDomain = ({
 									control={form.control}
 									name="https"
 									render={({ field }) => (
-										<FormItem className="flex flex-row items-center justify-between p-3 mt-4 border rounded-lg shadow-sm">
+										<FormItem className="flex flex-row items-center justify-between p-3 mt-4 border rounded-lg shadow-xs">
 											<div className="space-y-0.5">
 												<FormLabel>HTTPS</FormLabel>
 												<FormDescription>
@@ -301,7 +301,7 @@ export const AddPreviewDomain = ({
 					</form>
 
 					<DialogFooter>
-						<Button isLoading={isLoading} form="hook-form" type="submit">
+						<Button isLoading={isPending} form="hook-form" type="submit">
 							{dictionary.submit}
 						</Button>
 					</DialogFooter>

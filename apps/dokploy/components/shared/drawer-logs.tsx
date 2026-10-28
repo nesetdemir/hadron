@@ -47,7 +47,7 @@ export const DrawerLogs = ({ isOpen, onClose, filteredLogs }: Props) => {
 				onClose();
 			}}
 		>
-			<SheetContent className="sm:max-w-[740px] flex flex-col">
+			<SheetContent className="w-full sm:max-w-[740px]! flex flex-col">
 				<SheetHeader>
 					<SheetTitle>Deployment Logs</SheetTitle>
 					<SheetDescription>Details of the request log entry.</SheetDescription>
@@ -60,7 +60,11 @@ export const DrawerLogs = ({ isOpen, onClose, filteredLogs }: Props) => {
 					{" "}
 					{filteredLogs.length > 0 ? (
 						filteredLogs.map((log: LogLine, index: number) => (
-							<TerminalLine key={index} log={log} noTimestamp />
+							<TerminalLine
+								key={`${log.rawTimestamp ?? ""}-${index}`}
+								log={log}
+								noTimestamp
+							/>
 						))
 					) : (
 						<div className="flex justify-center items-center h-full text-muted-foreground">

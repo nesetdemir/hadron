@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export function SignInWithGithub() {
 	const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +13,9 @@ export function SignInWithGithub() {
 		try {
 			const { error } = await authClient.signIn.social({
 				provider: "github",
+				callbackURL: "/dashboard/home",
+				newUserCallbackURL: "/dashboard/home?signup=github",
+				errorCallbackURL: "/",
 			});
 			if (error) {
 				toast.error(error.message);
@@ -31,7 +34,7 @@ export function SignInWithGithub() {
 		<Button
 			variant="outline"
 			type="button"
-			className="w-full mb-4"
+			className="w-full"
 			onClick={handleClick}
 			isLoading={isLoading}
 		>

@@ -1,6 +1,5 @@
 import { relations } from "drizzle-orm";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { gitProvider } from "./git-provider";
@@ -17,6 +16,7 @@ export const github = pgTable("github", {
 	githubInstallationId: text("githubInstallationId"),
 	githubPrivateKey: text("githubPrivateKey"),
 	githubWebhookSecret: text("githubWebhookSecret"),
+	githubUrl: text("githubUrl").default("https://github.com").notNull(),
 	gitProviderId: text("gitProviderId")
 		.notNull()
 		.references(() => gitProvider.gitProviderId, { onDelete: "cascade" }),
@@ -29,8 +29,7 @@ export const githubProviderRelations = relations(github, ({ one }) => ({
 	}),
 }));
 
-const createSchema = createInsertSchema(github);
-export const apiCreateGithub = createSchema.extend({
+export const apiCreateGithub = z.object({
 	githubAppName: z.string().optional(),
 	githubAppId: z.number().optional(),
 	githubClientId: z.string().optional(),
@@ -38,6 +37,10 @@ export const apiCreateGithub = createSchema.extend({
 	githubInstallationId: z.string().optional(),
 	githubPrivateKey: z.string().optional(),
 	githubWebhookSecret: z.string().nullable(),
+	githubUrl: z
+		.url()
+		.startsWith("https://", "Only https is supported for GitHub instances")
+		.optional(),
 	gitProviderId: z.string().optional(),
 	name: z.string().min(1),
 });
@@ -48,13 +51,11 @@ export const apiFindGithubBranches = z.object({
 	githubId: z.string().optional(),
 });
 
-export const apiFindOneGithub = createSchema
-	.extend({
-		githubId: z.string().min(1),
-	})
-	.pick({ githubId: true });
+export const apiFindOneGithub = z.object({
+	githubId: z.string().min(1),
+});
 
-export const apiUpdateGithub = createSchema.extend({
+export const apiUpdateGithub = z.object({
 	githubId: z.string().min(1),
 	name: z.string().min(1),
 	gitProviderId: z.string().min(1),

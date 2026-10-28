@@ -1,6 +1,6 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import copy from "copy-to-clipboard";
-import { debounce } from "lodash";
+import debounce from "lodash/debounce";
 import { CheckIcon, ChevronsUpDown, Copy, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -50,40 +50,34 @@ interface Props {
 	id: string;
 	type: "application" | "compose";
 	serverId?: string;
+	trigger?: React.ReactNode;
 }
 
 const RestoreBackupSchema = z.object({
-	destinationId: z
-		.string({
-			required_error: "Please select a destination",
-		})
-		.min(1, {
-			message: "Destination is required",
-		}),
-	backupFile: z
-		.string({
-			required_error: "Please select a backup file",
-		})
-		.min(1, {
-			message: "Backup file is required",
-		}),
-	volumeName: z
-		.string({
-			required_error: "Please enter a volume name",
-		})
-		.min(1, {
-			message: "Volume name is required",
-		}),
+	destinationId: z.string().min(1, {
+		message: "Destination is required",
+	}),
+	backupFile: z.string().min(1, {
+		message: "Backup file is required",
+	}),
+	volumeName: z.string().min(1, {
+		message: "Volume name is required",
+	}),
 });
 
-export const RestoreVolumeBackups = ({ id, type, serverId }: Props) => {
+export const RestoreVolumeBackups = ({
+	id,
+	type,
+	serverId,
+	trigger,
+}: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
 	const { data: destinations = [] } = api.destination.all.useQuery();
 
-	const form = useForm<z.infer<typeof RestoreBackupSchema>>({
+	const form = useForm({
 		defaultValues: {
 			destinationId: "",
 			backupFile: "",
@@ -105,7 +99,7 @@ export const RestoreVolumeBackups = ({ id, type, serverId }: Props) => {
 		debouncedSetSearch(value);
 	};
 
-	const { data: files = [], isLoading } = api.backup.listBackupFiles.useQuery(
+	const { data: files = [], isPending } = api.backup.listBackupFiles.useQuery(
 		{
 			destinationId: destinationId,
 			search: debouncedSearchTerm,
@@ -156,10 +150,12 @@ export const RestoreVolumeBackups = ({ id, type, serverId }: Props) => {
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger asChild>
-				<Button variant="outline">
-					<RotateCcw className="mr-2 size-4" />
-					Restore Volume Backup
-				</Button>
+				{trigger ?? (
+					<Button variant="outline">
+						<RotateCcw className="mr-2 size-4" />
+						Restore Volume Backup
+					</Button>
+				)}
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
@@ -193,7 +189,7 @@ export const RestoreVolumeBackups = ({ id, type, serverId }: Props) => {
 												<Button
 													variant="outline"
 													className={cn(
-														"w-full justify-between !bg-input",
+														"w-full justify-between",
 														!field.value && "text-muted-foreground",
 													)}
 												>
@@ -275,7 +271,7 @@ export const RestoreVolumeBackups = ({ id, type, serverId }: Props) => {
 												<Button
 													variant="outline"
 													className={cn(
-														"w-full justify-between !bg-input",
+														"w-full justify-between",
 														!field.value && "text-muted-foreground",
 													)}
 												>
@@ -294,7 +290,7 @@ export const RestoreVolumeBackups = ({ id, type, serverId }: Props) => {
 													onValueChange={handleSearchChange}
 													className="h-9"
 												/>
-												{isLoading ? (
+												{isPending ? (
 													<div className="py-6 text-center text-sm">
 														Loading backup files...
 													</div>

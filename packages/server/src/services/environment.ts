@@ -6,11 +6,12 @@ import {
 } from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { asc, eq } from "drizzle-orm";
+import type { z } from "zod";
 
 export type Environment = typeof environments.$inferSelect;
 
 export const createEnvironment = async (
-	input: typeof apiCreateEnvironment._type,
+	input: z.infer<typeof apiCreateEnvironment>,
 ) => {
 	const newEnvironment = await db
 		.insert(environments)
@@ -33,42 +34,184 @@ export const createEnvironment = async (
 export const findEnvironmentById = async (environmentId: string) => {
 	const environment = await db.query.environments.findFirst({
 		where: eq(environments.environmentId, environmentId),
+		columns: {
+			name: true,
+			description: true,
+			environmentId: true,
+			isDefault: true,
+			projectId: true,
+			env: true,
+		},
 		with: {
 			applications: {
 				with: {
-					deployments: true,
-					server: true,
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					name: true,
+					applicationId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					buildType: true,
+					createdAt: true,
+					applicationStatus: true,
+					description: true,
+					serverId: true,
+					icon: true,
 				},
 			},
 			mariadb: {
 				with: {
-					server: true,
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					mariadbId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					name: true,
+					createdAt: true,
+					applicationStatus: true,
+					description: true,
+					serverId: true,
 				},
 			},
 			mongo: {
 				with: {
-					server: true,
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					mongoId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					name: true,
+					createdAt: true,
+					applicationStatus: true,
+					description: true,
+					serverId: true,
 				},
 			},
 			mysql: {
 				with: {
-					server: true,
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					mysqlId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					name: true,
+					createdAt: true,
+					applicationStatus: true,
+					description: true,
+					serverId: true,
 				},
 			},
 			postgres: {
 				with: {
-					server: true,
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					postgresId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					name: true,
+					description: true,
+					createdAt: true,
+					applicationStatus: true,
+					serverId: true,
 				},
 			},
 			redis: {
 				with: {
-					server: true,
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					redisId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					name: true,
+					createdAt: true,
+					applicationStatus: true,
+					description: true,
+					serverId: true,
 				},
 			},
 			compose: {
 				with: {
-					deployments: true,
-					server: true,
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					composeId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					name: true,
+					createdAt: true,
+					composeStatus: true,
+					description: true,
+					serverId: true,
+					icon: true,
+				},
+			},
+			libsql: {
+				with: {
+					server: {
+						columns: {
+							name: true,
+							serverId: true,
+						},
+					},
+				},
+				columns: {
+					libsqlId: true,
+					// Hadron: needed by the service graph, log viewer and env autocomplete
+					appName: true,
+					env: true,
+					name: true,
+					createdAt: true,
+					applicationStatus: true,
+					description: true,
+					serverId: true,
 				},
 			},
 			project: true,
@@ -84,18 +227,63 @@ export const findEnvironmentById = async (environmentId: string) => {
 };
 
 export const findEnvironmentsByProjectId = async (projectId: string) => {
+	const serviceColumns = {
+		name: true,
+		description: true,
+		appName: true,
+		createdAt: true,
+		serverId: true,
+		applicationStatus: true,
+	} as const;
+
 	const projectEnvironments = await db.query.environments.findMany({
 		where: eq(environments.projectId, projectId),
 		orderBy: asc(environments.createdAt),
 		with: {
-			applications: true,
-			mariadb: true,
-			mongo: true,
-			mysql: true,
-			postgres: true,
-			redis: true,
-			compose: true,
+			applications: {
+				columns: { ...serviceColumns, applicationId: true, icon: true },
+				with: { server: { columns: { name: true } } },
+			},
+			mariadb: {
+				columns: { ...serviceColumns, mariadbId: true },
+				with: { server: { columns: { name: true } } },
+			},
+			mongo: {
+				columns: { ...serviceColumns, mongoId: true },
+				with: { server: { columns: { name: true } } },
+			},
+			mysql: {
+				columns: { ...serviceColumns, mysqlId: true },
+				with: { server: { columns: { name: true } } },
+			},
+			postgres: {
+				columns: { ...serviceColumns, postgresId: true },
+				with: { server: { columns: { name: true } } },
+			},
+			redis: {
+				columns: { ...serviceColumns, redisId: true },
+				with: { server: { columns: { name: true } } },
+			},
+			compose: {
+				columns: {
+					...serviceColumns,
+					composeId: true,
+					composeStatus: true,
+					icon: true,
+				},
+				with: { server: { columns: { name: true } } },
+			},
+			libsql: {
+				columns: { ...serviceColumns, libsqlId: true },
+				with: { server: { columns: { name: true } } },
+			},
 			project: true,
+		},
+		columns: {
+			name: true,
+			description: true,
+			environmentId: true,
+			isDefault: true,
 		},
 	});
 	return projectEnvironments;
@@ -107,6 +295,7 @@ const environmentHasServices = (
 	return (
 		(env.applications?.length ?? 0) > 0 ||
 		(env.compose?.length ?? 0) > 0 ||
+		(env.libsql?.length ?? 0) > 0 ||
 		(env.mariadb?.length ?? 0) > 0 ||
 		(env.mongo?.length ?? 0) > 0 ||
 		(env.mysql?.length ?? 0) > 0 ||
@@ -156,7 +345,7 @@ export const updateEnvironmentById = async (
 };
 
 export const duplicateEnvironment = async (
-	input: typeof apiDuplicateEnvironment._type,
+	input: z.infer<typeof apiDuplicateEnvironment>,
 ) => {
 	// Find the original environment
 	const originalEnvironment = await findEnvironmentById(input.environmentId);
@@ -168,6 +357,7 @@ export const duplicateEnvironment = async (
 			name: input.name,
 			description: input.description || originalEnvironment.description,
 			projectId: originalEnvironment.projectId,
+			env: originalEnvironment.env,
 		})
 		.returning()
 		.then((value) => value[0]);
@@ -181,6 +371,48 @@ export const duplicateEnvironment = async (
 
 	return newEnvironment;
 };
+
+interface EnvironmentWithServices {
+	applications: { applicationId: string }[];
+	compose: { composeId: string }[];
+	libsql: { libsqlId: string }[];
+	mariadb: { mariadbId: string }[];
+	mongo: { mongoId: string }[];
+	mysql: { mysqlId: string }[];
+	postgres: { postgresId: string }[];
+	redis: { redisId: string }[];
+}
+
+export const filterEnvironmentServices = <T extends EnvironmentWithServices>(
+	environment: T,
+	accessedServices: string[],
+): T => ({
+	...environment,
+	applications: environment.applications.filter((app) =>
+		accessedServices.includes(app.applicationId),
+	),
+	compose: environment.compose.filter((comp) =>
+		accessedServices.includes(comp.composeId),
+	),
+	libsql: environment.libsql.filter((db) =>
+		accessedServices.includes(db.libsqlId),
+	),
+	mariadb: environment.mariadb.filter((db) =>
+		accessedServices.includes(db.mariadbId),
+	),
+	mongo: environment.mongo.filter((db) =>
+		accessedServices.includes(db.mongoId),
+	),
+	mysql: environment.mysql.filter((db) =>
+		accessedServices.includes(db.mysqlId),
+	),
+	postgres: environment.postgres.filter((db) =>
+		accessedServices.includes(db.postgresId),
+	),
+	redis: environment.redis.filter((db) =>
+		accessedServices.includes(db.redisId),
+	),
+});
 
 export const createProductionEnvironment = async (projectId: string) => {
 	const newEnvironment = await db

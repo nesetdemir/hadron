@@ -1,5 +1,6 @@
 import { IS_CLOUD } from "@dokploy/server";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
+import { generateServerSideHelper } from "@/utils/create-server-helpers";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -22,12 +23,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import { appRouter } from "@/server/api/root";
+import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
 const loginSchema = z.object({
 	email: z
 		.string()
 		.min(1, {
 			message: "Email is required",
+		})
+		.max(255, {
+			message: "Email must be at most 255 characters",
 		})
 		.email({
 			message: "Email must be a valid email",
@@ -42,6 +48,7 @@ type AuthResponse = {
 };
 
 export default function Home() {
+	const { config: whitelabeling } = useWhitelabelingPublic();
 	const [temp, _setTemp] = useState<AuthResponse>({
 		is2FAEnabled: false,
 		authId: "",
@@ -81,8 +88,14 @@ export default function Home() {
 		<div className="flex w-full items-center justify-center ">
 			<div className="flex flex-col items-center gap-4 w-full">
 				<Link href="/" className="flex flex-row items-center gap-2">
-					<Logo />
-					<span className="font-medium text-sm">Hadron</span>
+					<Logo
+						logoUrl={
+							whitelabeling?.loginLogoUrl || whitelabeling?.logoUrl || undefined
+						}
+					/>
+					<span className="font-medium text-sm">
+						{whitelabeling?.appName || "Hadron"}
+					</span>
 				</Link>
 				<CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
 				<CardDescription>
@@ -99,6 +112,7 @@ export default function Home() {
 						{!temp.is2FAEnabled ? (
 							<Form {...form}>
 								<form
+									method="post"
 									onSubmit={form.handleSubmit(onSubmit)}
 									className="grid gap-4"
 								>
@@ -110,7 +124,11 @@ export default function Home() {
 												<FormItem>
 													<FormLabel>Email</FormLabel>
 													<FormControl>
-														<Input placeholder="Email" {...field} />
+														<Input
+															placeholder="Email"
+															maxLength={255}
+															{...field}
+														/>
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -149,17 +167,24 @@ export default function Home() {
 Home.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps(_context: GetServerSidePropsContext) {
+export async function getServerSideProps(context: GetServerSidePropsContext) {
 	if (!IS_CLOUD) {
 		return {
 			redirect: {
-				permanent: true,
+				permanent: false,
 				destination: "/",
 			},
 		};
 	}
 
+	const helpers = generateServerSideHelper(appRouter, context);
+	// Prefetch the public branding so the logo and app name render
+	// correctly on the server (no flash of default branding).
+	await helpers.whitelabeling.getPublic.prefetch();
+
 	return {
-		props: {},
+		props: {
+			trpcState: helpers.dehydrate(),
+		},
 	};
 }

@@ -13,10 +13,14 @@ import {
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
 import { HandleAi } from "./handle-ai";
+import { HandleAiProviders } from "./handle-ai-providers";
 
 export const AiForm = () => {
-	const { data: aiConfigs, refetch, isLoading } = api.ai.getAll.useQuery();
-	const { mutateAsync, isLoading: isRemoving } = api.ai.delete.useMutation();
+	const { data: aiConfigs, refetch, isPending } = api.ai.getAll.useQuery();
+	const { mutateAsync, isPending: isRemoving } = api.ai.delete.useMutation();
+	const { data: currentUser } = api.user.get.useQuery();
+	const isOrgAdmin =
+		currentUser?.role === "owner" || currentUser?.role === "admin";
 
 	return (
 		<div className="w-full">
@@ -30,10 +34,13 @@ export const AiForm = () => {
 							</CardTitle>
 							<CardDescription>Manage your AI configurations</CardDescription>
 						</div>
-						{aiConfigs && aiConfigs?.length > 0 && <HandleAi />}
+						<div className="flex flex-row gap-2">
+							{isOrgAdmin && <HandleAiProviders />}
+							{aiConfigs && aiConfigs?.length > 0 && <HandleAi />}
+						</div>
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
-						{isLoading ? (
+						{isPending ? (
 							<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[25vh]">
 								<span>Loading...</span>
 								<Loader2 className="animate-spin size-4" />

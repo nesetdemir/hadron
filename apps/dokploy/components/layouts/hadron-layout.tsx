@@ -96,9 +96,9 @@ export function HadronTopBar() {
 		data: organizations,
 		refetch: refetchOrgs,
 	} = api.organization.all.useQuery();
-	const { mutateAsync: deleteOrganization, isLoading: isRemoving } =
+	const { mutateAsync: deleteOrganization, isPending: isRemoving } =
 		api.organization.delete.useMutation();
-	const { mutateAsync: setDefaultOrganization, isLoading: isSettingDefault } =
+	const { mutateAsync: setDefaultOrganization, isPending: isSettingDefault } =
 		api.organization.setDefault.useMutation();
 	const { theme, setTheme } = useTheme();
 	const pathname = usePathname();
@@ -269,7 +269,7 @@ export function HadronTopBar() {
 												window.location.reload();
 											}}
 										>
-											<div className="flex size-5 items-center justify-center rounded-sm border shrink-0">
+											<div className="flex size-5 items-center justify-center rounded-xs border shrink-0">
 												<Logo
 													className="size-4"
 													logoUrl={org.logo ?? undefined}

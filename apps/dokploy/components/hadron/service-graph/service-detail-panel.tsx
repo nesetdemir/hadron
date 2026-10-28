@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 import type { Services } from "@/pages/dashboard/project/[projectId]/environment/[environmentId]";
 import {
+	LibsqlIcon,
 	MariadbIcon,
 	MongodbIcon,
 	MysqlIcon,
@@ -41,7 +42,7 @@ import { ShowClusterSettings } from "@/components/dashboard/application/advanced
 import { ShowBuildServer } from "@/components/dashboard/application/advanced/show-build-server";
 
 // Database tab components (shared)
-import { ShowEnvironment as ShowDbEnvironment } from "@/components/dashboard/application/environment/show-enviroment";
+import { ShowEnvironment as ShowDbEnvironment } from "@/components/dashboard/application/environment/show-environment";
 import { ShowBackups } from "@/components/dashboard/database/backups/show-backups";
 import { ShowDatabaseAdvancedSettings } from "@/components/dashboard/shared/show-database-advanced-settings";
 
@@ -88,6 +89,7 @@ const serviceTypeLabels: Record<string, string> = {
 	mariadb: "MariaDB",
 	mongo: "MongoDB",
 	redis: "Redis",
+	libsql: "libSQL",
 	compose: "Compose",
 };
 
@@ -107,6 +109,8 @@ function ServiceTypeIcon({
 			return <MongodbIcon className={iconClass} />;
 		case "redis":
 			return <RedisIcon className={iconClass} />;
+		case "libsql":
+			return <LibsqlIcon className={iconClass} />;
 		case "compose":
 			return <CircuitBoard className={iconClass} />;
 		default:
@@ -215,6 +219,11 @@ export function ServiceDetailPanel({
 					{service.type === "redis" && (
 						<DatabaseTabs id={service.id} dbType="redis" appName={service.appName} serverId={service.serverId} />
 					)}
+					{service.type === "libsql" && (
+						<div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+							Open the full page to manage this libSQL database.
+						</div>
+					)}
 					{service.type === "compose" && (
 						<ComposeTabs
 							id={service.id}
@@ -289,6 +298,7 @@ function ApplicationTabs({
 						<ShowDockerLogs
 							appName={data.appName || ""}
 							serverId={data.serverId || ""}
+							serviceId={id}
 						/>
 					</div>
 				</TabsContent>
@@ -371,6 +381,7 @@ function DatabaseTabs({
 						<ShowDockerLogs
 							appName={(data as any).appName || ""}
 							serverId={(data as any).serverId || ""}
+							serviceId={id}
 						/>
 					</div>
 				</TabsContent>
@@ -506,11 +517,14 @@ function ComposeTabs({
 							<ShowDockerLogsCompose
 								serverId={data.serverId || ""}
 								appName={data.appName}
+								appType={data.composeType || "docker-compose"}
+								serviceId={id}
 							/>
 						) : (
 							<ShowDockerLogsStack
 								serverId={data.serverId || ""}
 								appName={data.appName}
+								serviceId={id}
 							/>
 						)}
 					</div>

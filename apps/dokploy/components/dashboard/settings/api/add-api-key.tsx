@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import copy from "copy-to-clipboard";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -32,10 +32,11 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { API_KEY_NAME_MAX_LENGTH, apiKeyNameSchema } from "@/lib/api-keys";
 import { api } from "@/utils/api";
 
 const formSchema = z.object({
-	name: z.string().min(1, "Name is required"),
+	name: apiKeyNameSchema,
 	prefix: z.string().optional(),
 	expiresIn: z.number().nullable(),
 	organizationId: z.string().min(1, "Organization is required"),
@@ -159,8 +160,15 @@ export const AddApiKey = () => {
 									<FormItem>
 										<FormLabel>Name</FormLabel>
 										<FormControl>
-											<Input placeholder="My API Key" {...field} />
+											<Input
+												placeholder="My API Key"
+												maxLength={API_KEY_NAME_MAX_LENGTH}
+												{...field}
+											/>
 										</FormControl>
+										<FormDescription>
+											Maximum {API_KEY_NAME_MAX_LENGTH} characters
+										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}

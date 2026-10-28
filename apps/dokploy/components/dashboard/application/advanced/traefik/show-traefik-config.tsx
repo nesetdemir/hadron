@@ -15,12 +15,16 @@ interface Props {
 }
 
 export const ShowTraefikConfig = ({ applicationId }: Props) => {
-	const { data, isLoading } = api.application.readTraefikConfig.useQuery(
+	const { data: permissions } = api.user.getPermissions.useQuery();
+	const canRead = permissions?.traefikFiles.read ?? false;
+	const { data, isPending } = api.application.readTraefikConfig.useQuery(
 		{
 			applicationId,
 		},
-		{ enabled: !!applicationId },
+		{ enabled: !!applicationId && canRead },
 	);
+
+	if (!canRead) return null;
 
 	return (
 		<Card className="bg-background">
@@ -35,7 +39,7 @@ export const ShowTraefikConfig = ({ applicationId }: Props) => {
 				</div>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
-				{isLoading ? (
+				{isPending ? (
 					<span className="text-base text-muted-foreground flex flex-row gap-3 items-center justify-center min-h-[10vh]">
 						Loading...
 						<Loader2 className="animate-spin" />
@@ -49,7 +53,7 @@ export const ShowTraefikConfig = ({ applicationId }: Props) => {
 					</div>
 				) : (
 					<div className="flex flex-col pt-2 relative">
-						<div className="flex flex-col gap-6 max-h-[35rem] min-h-[10rem] overflow-y-auto">
+						<div className="flex flex-col gap-6 max-h-140 min-h-40 overflow-y-auto">
 							<CodeEditor
 								lineWrapping
 								value={data || "Empty"}
